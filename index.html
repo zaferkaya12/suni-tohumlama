@@ -108,7 +108,7 @@
 
 <header>
   <h1 id="klinikAdi">AVCI VETERİNER KLİNİĞİ</h1>
-  <p id="sayfaBaslik">Özet</p>
+  <p id="sayfaBaslik">Özet <span style="font-size:10px;opacity:0.7;">v2.0</span></p>
 </header>
 
 <!-- Kurulum Banner -->
@@ -241,7 +241,27 @@ let deferredPrompt;
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('service-worker.js')
-      .then(reg => console.log('Service Worker kayıtlı'))
+      .then(reg => {
+        console.log('Service Worker kayıtlı');
+        
+        // Güncelleme kontrolü
+        reg.addEventListener('updatefound', () => {
+          const newWorker = reg.installing;
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              // Yeni versiyon mevcut, sayfayı yenile
+              if (confirm('Yeni güncelleme mevcut! Şimdi yüklensin mi?')) {
+                window.location.reload();
+              }
+            }
+          });
+        });
+        
+        // Her 1 saatte bir güncelleme kontrolü
+        setInterval(() => {
+          reg.update();
+        }, 3600000);
+      })
       .catch(err => console.log('Service Worker hatası:', err));
   });
 }
