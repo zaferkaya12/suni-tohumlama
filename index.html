@@ -37,7 +37,7 @@
     main.active { display:block; }
     nav {
       position:fixed; left:0; right:0; bottom:0; z-index:8; display:grid;
-      grid-template-columns:repeat(5,1fr); background:white; border-top:1px solid var(--border);
+      grid-template-columns:repeat(6,1fr); background:white; border-top:1px solid var(--border);
     }
     nav a {
       text-align:center; padding:10px 4px 12px; text-decoration:none; color:var(--muted);
@@ -203,12 +203,35 @@
   <footer>Hazırlayan: Zafer KAYA - Veteriner Hekim - Bingöl - 2026</footer>
 </main>
 
+<!-- AYARLAR SAYFA -->
+<main id="sayfa-ayarlar">
+  <div id="ayarlar-mesaj"></div>
+  <form class="card" id="formAyarlar">
+    <label>Klinik/İşletme Adı *</label>
+    <input name="klinik_adi" id="inp-ayar-klinik" required>
+    
+    <label>Adres</label>
+    <input name="klinik_adres" id="inp-ayar-adres">
+    
+    <label>Telefon</label>
+    <input name="klinik_tel" id="inp-ayar-tel" type="tel">
+    
+    <label>Gebelik Süresi (Gün) *</label>
+    <input name="gebelik_gunu" id="inp-ayar-gebelik" type="number" min="250" max="300" value="280" required>
+    <span class="muted">İnekler için standart: 280 gün</span>
+    
+    <button class="green" type="submit">Ayarları Kaydet</button>
+  </form>
+  <footer>Hazırlayan: Zafer KAYA - Veteriner Hekim - Bingöl - 2026</footer>
+</main>
+
 <nav>
   <a data-page="ozet" class="active">Özet</a>
   <a data-page="kayit">Yeni</a>
   <a data-page="kayitlar">Kayıtlar</a>
   <a data-page="stok">Stok</a>
   <a data-page="sahipler">Sahipler</a>
+  <a data-page="ayarlar">Ayarlar</a>
 </nav>
 
 <script>
@@ -469,7 +492,8 @@ function sayfaGoster(pageId) {
     kayit: 'Yeni Kayıt',
     kayitlar: 'Kayıtlar',
     stok: 'Sperma Stoku',
-    sahipler: 'Sahipler'
+    sahipler: 'Sahipler',
+    ayarlar: 'Ayarlar'
   };
   document.getElementById('sayfaBaslik').textContent = basliklar[pageId];
   
@@ -478,6 +502,7 @@ function sayfaGoster(pageId) {
   else if (pageId === 'kayitlar') sayfaKayitlarYukle();
   else if (pageId === 'stok') sayfaStokYukle();
   else if (pageId === 'sahipler') sayfaSahiplerYukle();
+  else if (pageId === 'ayarlar') sayfaAyarlarYukle();
 }
 
 // ============= ÖZET SAYFASI =============
@@ -751,6 +776,44 @@ function sahipSilBtn(id) {
     mesajGoster('sahipler-mesaj', err.message, 'error');
   }
 }
+
+// ============= AYARLAR SAYFASI =============
+function sayfaAyarlarYukle() {
+  const ayarlar = DB.ayarlar();
+  document.getElementById('inp-ayar-klinik').value = ayarlar.klinik_adi;
+  document.getElementById('inp-ayar-adres').value = ayarlar.klinik_adres || '';
+  document.getElementById('inp-ayar-tel').value = ayarlar.klinik_tel || '';
+  document.getElementById('inp-ayar-gebelik').value = ayarlar.gebelik_gunu;
+}
+
+document.getElementById('formAyarlar').addEventListener('submit', e => {
+  e.preventDefault();
+  try {
+    const klinikAdi = document.getElementById('inp-ayar-klinik').value.trim();
+    const klinikAdres = document.getElementById('inp-ayar-adres').value.trim();
+    const klinikTel = document.getElementById('inp-ayar-tel').value.trim();
+    const gebelikGunu = parseInt(document.getElementById('inp-ayar-gebelik').value);
+    
+    if (!klinikAdi) throw new Error('Klinik adı zorunludur.');
+    if (gebelikGunu < 250 || gebelikGunu > 300) {
+      throw new Error('Gebelik süresi 250-300 gün arasında olmalıdır.');
+    }
+    
+    const ayarlar = {
+      klinik_adi: klinikAdi,
+      klinik_adres: klinikAdres,
+      klinik_tel: klinikTel,
+      gebelik_gunu: gebelikGunu
+    };
+    
+    DB.set('ayarlar', ayarlar);
+    document.getElementById('klinikAdi').textContent = klinikAdi;
+    
+    mesajGoster('ayarlar-mesaj', 'Ayarlar kaydedildi!', 'ok');
+  } catch (err) {
+    mesajGoster('ayarlar-mesaj', err.message, 'error');
+  }
+});
 
 // ============= NAVİGASYON ETKİNLEŞTİRME =============
 document.querySelectorAll('nav a').forEach(a => {
