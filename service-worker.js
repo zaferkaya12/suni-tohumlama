@@ -1,4 +1,4 @@
-const CACHE_NAME = 'suni-tohumlama-v1';
+const CACHE_NAME = 'suni-tohumlama-v2';
 const urlsToCache = [
   'index.html',
   'manifest.json'
