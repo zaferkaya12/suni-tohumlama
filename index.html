@@ -16,6 +16,9 @@
   
   <title>Suni Tohumlama Takip</title>
   
+  <!-- SheetJS - Excel Export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  
   <style>
     :root {
       --bg:#F0F7FF; --panel:#FFFFFF; --header:#1A6B9A; --accent:#2196F3;
@@ -37,7 +40,7 @@
     main.active { display:block; }
     nav {
       position:fixed; left:0; right:0; bottom:0; z-index:8; display:grid;
-      grid-template-columns:repeat(6,1fr); background:white; border-top:1px solid var(--border);
+      grid-template-columns:repeat(7,1fr); background:white; border-top:1px solid var(--border);
     }
     nav a {
       text-align:center; padding:10px 4px 12px; text-decoration:none; color:var(--muted);
@@ -75,7 +78,13 @@
     .alert { border-radius:8px; padding:10px; margin:0 0 12px; font-weight:700; }
     .alert.ok { background:#E8F5E9; color:#1B5E20; }
     .alert.error { background:#FFEBEE; color:#B71C1C; }
-    .alert.info { background:#E3F2FD; color:#0D47A1; }
+    table { width:100%; border-collapse:collapse; margin:10px 0; }
+    table th, table td { 
+      padding:8px; 
+      text-align:left; 
+      border-bottom:1px solid var(--border); 
+    }
+    table th { background:#F0F7FF; font-weight:700; }
     .actions { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px; }
     footer { color:var(--muted); text-align:center; font-size:12px; padding:12px; }
     
@@ -197,12 +206,45 @@
       <div><label>İl</label><input name="il" id="inp-sahip-il"></div>
       <div><label>İlçe</label><input name="ilce" id="inp-sahip-ilce"></div>
     </div>
+    
+    <label>Köy</label>
+    <input name="koy" id="inp-sahip-koy" list="koy-list">
+    <datalist id="koy-list"></datalist>
     <button class="green" type="submit">Sahip Ekle</button>
   </form>
   <div class="card" id="sahipler-liste"></div>
   <footer>Hazırlayan: Zafer KAYA - Veteriner Hekim - Bingöl - 2026</footer>
 </main>
-
+<!-- RAPORLAR SAYFA -->
+<main id="sayfa-raporlar">
+  <div id="rapor-mesaj"></div>
+  <form class="card" id="formRapor">
+    <label>Başlangıç Tarihi *</label>
+    <input type="date" id="rapor-baslangic" required>
+    
+    <label>Bitiş Tarihi *</label>
+    <input type="date" id="rapor-bitis" required>
+    
+    <button class="green" type="submit">Rapor Oluştur</button>
+  </form>
+  
+  <div class="card" id="rapor-sonuc" style="display:none;">
+    <h3>İstatistikler</h3>
+    <div id="rapor-ozet"></div>
+    
+    <h4>Haftalık Dağılım</h4>
+    <div id="rapor-haftalik"></div>
+    
+    <h4>Aylık Dağılım</h4>
+    <div id="rapor-aylik"></div>
+    
+    <button class="green" onclick="excelIndir()" style="margin-top:15px;">
+      📊 Excel İndir
+    </button>
+  </div>
+  
+  <footer>Hazırlayan: Zafer KAYA - Veteriner Hekim - Bingöl - 2026</footer>
+</main>
 <!-- AYARLAR SAYFA -->
 <main id="sayfa-ayarlar">
   <div id="ayarlar-mesaj"></div>
@@ -222,6 +264,35 @@
     
     <button class="green" type="submit">Ayarları Kaydet</button>
   </form>
+  
+  <div class="card">
+    <h3>Veritabanı Yönetimi</h3>
+    
+    <button class="green" onclick="veritabaniKaydet()">
+      💾 JSON Yedek Al
+    </button>
+    
+    <button class="green" onclick="tumVeriExcel()">
+      📊 Excel Yedek Al
+    </button>
+    
+    <input type="file" id="fileYedek" accept=".json" style="display:none;">
+    <button class="light" onclick="document.getElementById('fileYedek').click()">
+      📂 Yedek Yükle
+    </button>
+    
+    <button class="red" onclick="veritabaniSifirla()" style="margin-top:15px;">
+      🗑️ Tüm Verileri Sil
+    </button>
+  </div>
+  
+  <div class="card">
+    <h3>Uygulama</h3>
+    <button class="red" onclick="guvenliCikis()">
+      🚪 Güvenli Çıkış
+    </button>
+  </div>
+  
   <footer>Hazırlayan: Zafer KAYA - Veteriner Hekim - Bingöl - 2026</footer>
 </main>
 
@@ -232,6 +303,7 @@
   <a data-page="stok">Stok</a>
   <a data-page="sahipler">Sahipler</a>
   <a data-page="ayarlar">Ayarlar</a>
+  <a data-page="raporlar">Rapor</a>
 </nav>
 
 <script>
@@ -265,7 +337,277 @@ if ('serviceWorker' in navigator) {
       .catch(err => console.log('Service Worker hatası:', err));
   });
 }
+  // ============= VERİTABANI YÖNETİMİ FONKSİYONLARI =============
+function veritabaniKaydet() {
+  const data = {
+    sahipler: DB.sahipler(),
+    inekler: DB.inekler(),
+    bogalar: DB.bogalar(),
+    stok: DB.stok(),
+    tohumlamalar: DB.tohumlamalar(),
+    koyler: DB.koyler(),
+    ayarlar: DB.ayarlar(),
+    versiyon: '2.0',
+    tarih: new Date().toISOString(),
+    kayit_sayisi: DB.tohumlamalar().length
+  };
+  
+  const json = JSON.stringify(data, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `suni_tohumlama_yedek_${new Date().toISOString().split('T')[0]}.json`;
+  a.click();
+  
+  URL.revokeObjectURL(url);
+  
+  mesajGoster('ayarlar-mesaj', 'Yedek alındı!', 'ok');
+}
 
+function veritabaniSifirla() {
+  const onay1 = confirm('TÜM VERİLER SİLİNECEK! Emin misiniz?');
+  if (!onay1) return;
+  
+  const onay2 = confirm('Bu işlem GERİ ALINAMAZ! Son kez onaylıyor musunuz?');
+  if (!onay2) return;
+  
+  DB.set('sahipler', []);
+  DB.set('inekler', []);
+  DB.set('bogalar', []);
+  DB.set('stok', []);
+  DB.set('tohumlamalar', []);
+  DB.set('koyler', []);
+  
+  alert('Tüm veriler silindi. Sayfa yenilenecek.');
+  window.location.reload();
+}
+
+function guvenliCikis() {
+  if (confirm('Uygulamadan çıkmak istediğinizden emin misiniz?')) {
+    const yedek = confirm('Çıkmadan önce yedek almak ister misiniz?');
+    if (yedek) {
+      veritabaniKaydet();
+      setTimeout(() => {
+        window.close();
+        if (!window.closed) {
+          alert('Uygulamayı kapatmak için Android\'in Geri butonunu kullanın.');
+        }
+      }, 1000);
+    } else {
+      window.close();
+      if (!window.closed) {
+        alert('Uygulamayı kapatmak için Android\'in Geri butonunu kullanın.');
+      }
+    }
+  }
+}
+
+document.getElementById('fileYedek').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  
+  try {
+    const text = await file.text();
+    const data = JSON.parse(text);
+    
+    if (!data.sahipler || !data.tohumlamalar) {
+      throw new Error('Geçersiz yedek dosyası!');
+    }
+    
+    if (!confirm(`${data.kayit_sayisi} kayıt yüklenecek. Mevcut veriler SİLİNECEK! Onaylıyor musunuz?`)) {
+      return;
+    }
+    
+    DB.set('sahipler', data.sahipler);
+    DB.set('inekler', data.inekler);
+    DB.set('bogalar', data.bogalar);
+    DB.set('stok', data.stok);
+    DB.set('tohumlamalar', data.tohumlamalar);
+    DB.set('koyler', data.koyler || []);
+    DB.set('ayarlar', data.ayarlar);
+    
+    alert('Yedek başarıyla yüklendi! Sayfa yenilenecek.');
+    window.location.reload();
+    
+  } catch (err) {
+    mesajGoster('ayarlar-mesaj', `Yedek yükleme hatası: ${err.message}`, 'error');
+  }
+
+ // ============= EXCEL EXPORT FONKSİYONLARI =============
+function excelIndir() {
+  if (!window.raporData || raporData.length === 0) {
+    alert('Önce rapor oluşturun!');
+    return;
+  }
+  
+  const sahipler = DB.sahipler();
+  const bogalar = DB.bogalar();
+  const koyler = DB.koyler();
+  
+  const rows = [
+    ['Sıra No', 'Sahip', 'İl', 'İlçe', 'Köy', 'Küpe No', 'Tohumlama Tarihi', 
+     'Doğum Tarihi', 'Boğa', 'Açıklama']
+  ];
+  
+  raporData.forEach(t => {
+    const sahip = sahipler.find(s => s.id === t.sahip_id);
+    const boga = bogalar.find(b => b.id === t.boga_id);
+    const koy = sahip?.koy_id ? koyler.find(k => k.id === sahip.koy_id) : null;
+    
+    rows.push([
+      t.sira_no,
+      sahip?.ad_soyad || '',
+      sahip?.il || '',
+      sahip?.ilce || '',
+      koy?.koy_adi || '',
+      t.kupe_no,
+      tarihTR(t.tohumlama_tarihi),
+      tarihTR(t.dogum_tarihi),
+      boga?.boga_adi || '',
+      t.aciklama
+    ]);
+  });
+  
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  
+  ws['!cols'] = [
+    { width: 8 }, { width: 20 }, { width: 12 }, { width: 12 }, { width: 15 },
+    { width: 15 }, { width: 15 }, { width: 15 }, { width: 15 }, { width: 30 }
+  ];
+  
+  XLSX.utils.book_append_sheet(wb, ws, 'Tohumlama Kayıtları');
+  
+  const baslangic = document.getElementById('rapor-baslangic').value;
+  const bitis = document.getElementById('rapor-bitis').value;
+  const dosyaAdi = `tohumlama_raporu_${baslangic}_${bitis}.xlsx`;
+  
+  XLSX.writeFile(wb, dosyaAdi);
+  
+  mesajGoster('rapor-mesaj', 'Excel dosyası indirildi!', 'ok');
+}
+
+function tumVeriExcel() {
+  const tohumlamalar = DB.tohumlamalar();
+  const sahipler = DB.sahipler();
+  const bogalar = DB.bogalar();
+  const koyler = DB.koyler();
+  
+  const wb = XLSX.utils.book_new();
+  
+  // Sayfa 1: Kayıtlar
+  const tohumRows = [
+    ['Sıra No', 'Sahip', 'İl', 'İlçe', 'Köy', 'Küpe No', 'Tohumlama', 
+     'Doğum', 'Boğa', 'Açıklama']
+  ];
+  tohumlamalar.forEach(t => {
+    const sahip = sahipler.find(s => s.id === t.sahip_id);
+    const boga = bogalar.find(b => b.id === t.boga_id);
+    const koy = sahip?.koy_id ? koyler.find(k => k.id === sahip.koy_id) : null;
+    tohumRows.push([
+      t.sira_no, sahip?.ad_soyad || '', sahip?.il || '', sahip?.ilce || '',
+      koy?.koy_adi || '', t.kupe_no, tarihTR(t.tohumlama_tarihi),
+      tarihTR(t.dogum_tarihi), boga?.boga_adi || '', t.aciklama
+    ]);
+  });
+  const ws1 = XLSX.utils.aoa_to_sheet(tohumRows);
+  XLSX.utils.book_append_sheet(wb, ws1, 'Kayıtlar');
+  
+  // Sayfa 2: Sahipler
+  const sahipRows = [['Ad Soyad', 'İl', 'İlçe', 'Köy', 'Kayıt Sayısı']];
+  sahipler.forEach(s => {
+    const koy = s.koy_id ? koyler.find(k => k.id === s.koy_id) : null;
+    const kayitSayisi = tohumlamalar.filter(t => t.sahip_id === s.id).length;
+    sahipRows.push([s.ad_soyad, s.il, s.ilce, koy?.koy_adi || '', kayitSayisi]);
+  });
+  const ws2 = XLSX.utils.aoa_to_sheet(sahipRows);
+  XLSX.utils.book_append_sheet(wb, ws2, 'Sahipler');
+  
+  // Sayfa 3: Stok
+  const stoklar = DB.stok();
+  const stokRows = [['Boğa Adı', 'Mevcut Stok', 'Toplam Kullanım']];
+  bogalar.forEach(b => {
+    const stok = stoklar.find(s => s.boga_id === b.id);
+    const kullanim = tohumlamalar.filter(t => t.boga_id === b.id).length;
+    stokRows.push([b.boga_adi, stok?.miktar || 0, kullanim]);
+  });
+  const ws3 = XLSX.utils.aoa_to_sheet(stokRows);
+  XLSX.utils.book_append_sheet(wb, ws3, 'Stok');
+  
+  const dosyaAdi = `suni_tohumlama_yedek_${new Date().toISOString().split('T')[0]}.xlsx`;
+  XLSX.writeFile(wb, dosyaAdi);
+  
+  mesajGoster('ayarlar-mesaj', 'Tüm veriler Excel\'e aktarıldı!', 'ok');
+}
+
+// ============= RAPOR FORM SUBMIT =============
+document.getElementById('formRapor').addEventListener('submit', e => {
+  e.preventDefault();
+  try {
+    const baslangic = new Date(document.getElementById('rapor-baslangic').value);
+    const bitis = new Date(document.getElementById('rapor-bitis').value);
+    
+    if (baslangic > bitis) {
+      throw new Error('Başlangıç tarihi bitiş tarihinden büyük olamaz.');
+    }
+    
+    const tohumlamalar = DB.tohumlamalar();
+    const filtrelenmis = tohumlamalar.filter(t => {
+      const tarih = new Date(t.tohumlama_tarihi);
+      return tarih >= baslangic && tarih <= bitis;
+    });
+    
+    const haftalik = haftalikIstatistik(filtrelenmis);
+    const aylik = aylikIstatistik(filtrelenmis);
+    
+    // Özet
+    document.getElementById('rapor-ozet').innerHTML = `
+      <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:10px 0;">
+        <div style="text-align:center; padding:15px; background:#E3F2FD; border-radius:8px;">
+          <div style="font-size:24px; font-weight:700; color:#1976D2;">${filtrelenmis.length}</div>
+          <div style="font-size:12px; color:#666;">Toplam Kayıt</div>
+        </div>
+        <div style="text-align:center; padding:15px; background:#E8F5E9; border-radius:8px;">
+          <div style="font-size:24px; font-weight:700; color:#388E3C;">${Object.keys(haftalik).length}</div>
+          <div style="font-size:12px; color:#666;">Hafta</div>
+        </div>
+        <div style="text-align:center; padding:15px; background:#FFF3E0; border-radius:8px;">
+          <div style="font-size:24px; font-weight:700; color:#F57C00;">${Object.keys(aylik).length}</div>
+          <div style="font-size:12px; color:#666;">Ay</div>
+        </div>
+      </div>
+    `;
+    
+    // Haftalık tablo
+    let haftalikHTML = '<table><tr><th>Hafta</th><th>Adet</th></tr>';
+    Object.entries(haftalik).sort().forEach(([hafta, adet]) => {
+      haftalikHTML += `<tr><td>${e(hafta)}</td><td><b>${adet}</b></td></tr>`;
+    });
+    haftalikHTML += '</table>';
+    document.getElementById('rapor-haftalik').innerHTML = haftalikHTML;
+    
+    // Aylık tablo
+    let aylikHTML = '<table><tr><th>Ay</th><th>Adet</th></tr>';
+    Object.entries(aylik).sort().forEach(([ay, adet]) => {
+      aylikHTML += `<tr><td>${e(ay)}</td><td><b>${adet}</b></td></tr>`;
+    });
+    aylikHTML += '</table>';
+    document.getElementById('rapor-aylik').innerHTML = aylikHTML;
+    
+    document.getElementById('rapor-sonuc').style.display = 'block';
+    
+    // Excel için global değişkende sakla
+    window.raporData = filtrelenmis;
+    
+    mesajGoster('rapor-mesaj', 'Rapor oluşturuldu!', 'ok');
+  } catch (err) {
+    mesajGoster('rapor-mesaj', err.message, 'error');
+  }
+});
+
+// ============= PWA KURULUM PROMPT =============
 // Kurulum istemi yakala
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
@@ -318,6 +660,9 @@ const DB = {
   },
   tohumlamalar() {
     return DB.get('tohumlamalar') || [];
+  },
+  koyler() {
+    return DB.get('koyler') || [];
   },
   ayarlar() {
     return DB.get('ayarlar') || {
@@ -376,20 +721,57 @@ function mesajGoster(containerId, mesaj, tip) {
   div.innerHTML = `<div class="alert ${tip}">${e(mesaj)}</div>`;
   setTimeout(() => div.innerHTML = '', 3000);
 }
+// ============= KÖY FONKSİYONLARI =============
+function koyEkle(koyAdi, ilce) {
+  const koyler = DB.koyler();
+  let koy = koyler.find(k => k.koy_adi === koyAdi && k.ilce === ilce);
+  if (!koy) {
+    koy = { id: Date.now(), koy_adi: koyAdi, ilce: ilce };
+    koyler.push(koy);
+    DB.set('koyler', koyler);
+  }
+  return koy;
+}
 
-// ============= VERİ İŞLEMLERİ =============
-function sahipEkle(ad, il, ilce) {
+function koySil(id) {
+  const sahipler = DB.sahipler();
+  if (sahipler.some(s => s.koy_id === id)) {
+    throw new Error('Bu köyde kayıtlı sahip var.');
+  }
+  const koyler = DB.koyler().filter(k => k.id !== id);
+  DB.set('koyler', koyler);
+}
+
+function koyListesiYukle() {
+  const koyler = DB.koyler();
+  const datalist = document.getElementById('koy-list');
+  if (datalist) {
+    datalist.innerHTML = koyler.map(k => `<option value="${e(k.koy_adi)}">`).join('');
+  }
+}
+
+// ============= SAHİP FONKSİYONLARI =============
+function sahipEkle(ad, il, ilce, koyAdi) {
   const sahipler = DB.sahipler();
   let sahip = sahipler.find(s => s.ad_soyad === ad);
+  
+  let koyId = null;
+  if (koyAdi && koyAdi.trim()) {
+    const koy = koyEkle(koyAdi.trim(), ilce);
+    koyId = koy.id;
+  }
+  
   if (sahip) {
     sahip.il = il;
     sahip.ilce = ilce;
+    sahip.koy_id = koyId;
   } else {
     sahip = {
       id: Date.now(),
       ad_soyad: ad,
       il: il || '',
-      ilce: ilce || ''
+      ilce: ilce || '',
+      koy_id: koyId
     };
     sahipler.push(sahip);
   }
@@ -513,18 +895,18 @@ function sayfaGoster(pageId) {
     kayitlar: 'Kayıtlar',
     stok: 'Sperma Stoku',
     sahipler: 'Sahipler',
-    ayarlar: 'Ayarlar'
+    ayarlar: 'Ayarlar',
+    raporlar: 'Raporlar'
   };
   document.getElementById('sayfaBaslik').textContent = basliklar[pageId];
   
-  if (pageId === 'ozet') sayfaOzetYukle();
-  else if (pageId === 'kayit') sayfaKayitYukle();
-  else if (pageId === 'kayitlar') sayfaKayitlarYukle();
-  else if (pageId === 'stok') sayfaStokYukle();
-  else if (pageId === 'sahipler') sayfaSahiplerYukle();
-  else if (pageId === 'ayarlar') sayfaAyarlarYukle();
+ if (page === 'ozet') sayfaOzetYukle();
+  else if (page === 'kayitlar') sayfaKayitlarYukle();
+  else if (page === 'stok') sayfaStokYukle();
+  else if (page === 'sahipler') sayfaSahiplerYukle();
+  else if (page === 'ayarlar') sayfaAyarlarYukle();
+  else if (page === 'raporlar') sayfaRaporlarYukle();
 }
-
 // ============= ÖZET SAYFASI =============
 function sayfaOzetYukle() {
   const tohumlamalar = DB.tohumlamalar();
@@ -747,8 +1129,10 @@ function bogaSilBtn(id) {
 
 // ============= SAHİPLER SAYFASI =============
 function sayfaSahiplerYukle() {
+  koyListesiYukle();
   const sahipler = DB.sahipler();
-  const tohumlamalar = DB.tohumlamalar();
+  const html = sahipler.map(s => {
+    const kayitSayisi = DB.tohumlamalar().filter(t => t.sahip_id === s.id).length;
   
   let items = '';
   sahipler.forEach(s => {
@@ -774,10 +1158,11 @@ document.getElementById('formSahip').addEventListener('submit', e => {
     const ad = document.getElementById('inp-sahip-ad').value.trim();
     const il = document.getElementById('inp-sahip-il').value.trim();
     const ilce = document.getElementById('inp-sahip-ilce').value.trim();
+    const koy = document.getElementById('inp-sahip-koy').value.trim();
     
     if (!ad) throw new Error('Ad soyad zorunludur.');
     
-    sahipEkle(ad, il, ilce);
+    sahipEkle(ad, il, ilce, koy);
     mesajGoster('sahipler-mesaj', 'Sahip kaydedildi!', 'ok');
     document.getElementById('formSahip').reset();
     sayfaSahiplerYukle();
@@ -796,7 +1181,44 @@ function sahipSilBtn(id) {
     mesajGoster('sahipler-mesaj', err.message, 'error');
   }
 }
+// ============= RAPORLAMA FONKSİYONLARI =============
+function getHaftaNo(tarih) {
+  const d = new Date(Date.UTC(tarih.getFullYear(), tarih.getMonth(), tarih.getDate()));
+  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+  const yilBasi = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  const haftaNo = Math.ceil(((d - yilBasi) / 86400000 + 1) / 7);
+  return `${d.getUTCFullYear()}-H${haftaNo}`;
+}
 
+function haftalikIstatistik(tohumlamalar) {
+  const haftalar = {};
+  tohumlamalar.forEach(t => {
+    const tarih = new Date(t.tohumlama_tarihi);
+    const hafta = getHaftaNo(tarih);
+    haftalar[hafta] = (haftalar[hafta] || 0) + 1;
+  });
+  return haftalar;
+}
+
+function aylikIstatistik(tohumlamalar) {
+  const aylar = {};
+  tohumlamalar.forEach(t => {
+    const tarih = new Date(t.tohumlama_tarihi);
+    const ay = `${tarih.getFullYear()}-${String(tarih.getMonth() + 1).padStart(2, '0')}`;
+    aylar[ay] = (aylar[ay] || 0) + 1;
+  });
+  return aylar;
+}
+
+function sayfaRaporlarYukle() {
+  const bugun = new Date().toISOString().split('T')[0];
+  const ayOnce = new Date();
+  ayOnce.setMonth(ayOnce.getMonth() - 1);
+  
+  document.getElementById('rapor-baslangic').value = ayOnce.toISOString().split('T')[0];
+  document.getElementById('rapor-bitis').value = bugun;
+  document.getElementById('rapor-sonuc').style.display = 'none';
+}
 // ============= AYARLAR SAYFASI =============
 function sayfaAyarlarYukle() {
   const ayarlar = DB.ayarlar();
