@@ -1132,7 +1132,7 @@ function bogaSilBtn(id) {
 function sayfaSahiplerYukle() {
   koyListesiYukle();
   const sahipler = DB.sahipler();
-  const html = sahipler.map(s => {
+  const tohumlamalar = DB.tohumlamalar();
   
   let items = '';
   sahipler.forEach(s => {
