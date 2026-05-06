@@ -1132,7 +1132,6 @@ function sayfaSahiplerYukle() {
   koyListesiYukle();
   const sahipler = DB.sahipler();
   const html = sahipler.map(s => {
-    const kayitSayisi = DB.tohumlamalar().filter(t => t.sahip_id === s.id).length;
   
   let items = '';
   sahipler.forEach(s => {
