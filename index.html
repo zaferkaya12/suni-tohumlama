@@ -974,6 +974,7 @@ document.getElementById('formKayit').addEventListener('submit', e => {
     const sahipAd = document.getElementById('inp-sahip').value.trim();
     const il = document.getElementById('inp-il').value.trim();
     const ilce = document.getElementById('inp-ilce').value.trim();
+    const koy = document.getElementById('inp-koy')?.value.trim() || '';
     const kupe = document.getElementById('inp-kupe').value.trim();
     const tarih = document.getElementById('inp-tarih').value;
     const bogaAd = document.getElementById('inp-boga').value.trim();
@@ -983,7 +984,7 @@ document.getElementById('formKayit').addEventListener('submit', e => {
       throw new Error('Sahip, küpe, tarih ve boğa zorunludur.');
     }
     
-    const sahip = sahipEkle(sahipAd, il, ilce);
+    const sahip = sahipEkle(sahipAd, il, ilce, koy);
     inekEkle(kupe, sahip.id);
     
     const bogalar = DB.bogalar();
