@@ -4,6 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#1A6B9A">
+  <link rel="manifest" href="./manifest.json">
+  <link rel="icon" href="./icon-192.png" sizes="192x192">
+  <link rel="apple-touch-icon" href="./icon-192.png">
+  <meta name="application-name" content="Suni Tohumlama Takip">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -85,18 +89,6 @@
   <h1 id="klinikAdi">AVCI VETERİNER KLİNİĞİ</h1>
   <p id="sayfaBaslik">Özet</p>
 </header>
-
-<!-- OTOMATİK KURULUM BANNER -->
-<div id="install-banner" style="display:none; position:fixed; bottom:70px; left:0; right:0; z-index:999; background:#1A6B9A; color:white; padding:16px; box-shadow:0 -2px 10px rgba(0,0,0,0.2);">
-  <div style="max-width:600px; margin:0 auto; display:flex; align-items:center; gap:12px;">
-    <div style="flex:1;">
-      <b style="display:block; margin-bottom:4px;">📱 Uygulamayı Kur</b>
-      <span style="font-size:13px; opacity:0.9;">Telefonunuza kurun, çevrimdışı çalışır!</span>
-    </div>
-    <button onclick="installApp()" style="background:white; color:#1A6B9A; border:none; padding:10px 20px; border-radius:8px; font-weight:700; font-size:14px; cursor:pointer; min-width:80px;">Kur</button>
-    <button onclick="closeInstallBanner()" style="background:transparent; color:white; border:1px solid white; padding:10px 16px; border-radius:8px; font-weight:700; font-size:14px; cursor:pointer;">✕</button>
-  </div>
-</div>
 
 <!-- ÖZET SAYFA -->
 <main id="sayfa-ozet" class="active">
@@ -936,45 +928,28 @@ window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   deferredPrompt = e;
   window.deferredPrompt = e;
-  
-  // Otomatik banner göster
-  document.getElementById('install-banner').style.display = 'block';
-  
-  // Ayarlar sayfası kartını da göster
   document.getElementById('pwa-install-card').style.display = 'block';
 });
 
-function installApp() {
-  if (deferredPrompt) {
-    // PWA kurulum API'si varsa kullan
-    deferredPrompt.prompt();
-    deferredPrompt.userChoice.then((choiceResult) => {
-      if (choiceResult.outcome === 'accepted') {
-        console.log('PWA kuruldu');
-        document.getElementById('install-banner').style.display = 'none';
-        document.getElementById('pwa-install-card').style.display = 'none';
-      }
-      deferredPrompt = null;
-      window.deferredPrompt = null;
-    });
-  } else {
-    // API yoksa manuel talimat göster
-    alert('Kurulum için:\n\n1. Chrome menüsünü (⋮) açın\n2. "Ana ekrana ekle" seçin\n3. "Yükle" veya "Ekle" deyin\n\n(iPhone: Safari Share menüsünden)');
-  }
-}
-
-function closeInstallBanner() {
-  document.getElementById('install-banner').style.display = 'none';
-  localStorage.setItem('install-banner-closed', 'true');
-}
-
 function pwaKur() {
-  installApp();
+  if (!deferredPrompt) {
+    alert('Uygulama zaten kurulu veya tarayıcınız desteklemiyor.');
+    return;
+  }
+  
+  deferredPrompt.prompt();
+  deferredPrompt.userChoice.then((choiceResult) => {
+    if (choiceResult.outcome === 'accepted') {
+      console.log('PWA kuruldu');
+      document.getElementById('pwa-install-card').style.display = 'none';
+    }
+    deferredPrompt = null;
+    window.deferredPrompt = null;
+  });
 }
 
 window.addEventListener('appinstalled', () => {
   console.log('PWA başarıyla kuruldu');
-  document.getElementById('install-banner').style.display = 'none';
   document.getElementById('pwa-install-card').style.display = 'none';
 });
 
@@ -991,25 +966,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const ayarlar = DB.ayarlar();
   document.getElementById('klinikAdi').textContent = ayarlar.klinik_adi;
   sayfaGoster('ozet');
-  
-  // Service Worker kaydet
+
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./service-worker.js')
       .then(reg => console.log('Service Worker kaydedildi:', reg.scope))
-      .catch(err => console.log('Service Worker hatası:', err));
+      .catch(err => console.log('Service Worker hatasi:', err));
   }
-  
-  // Banner'ı her zaman göster (standalone modda değilse)
-  setTimeout(() => {
-    const bannerClosed = localStorage.getItem('install-banner-closed');
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-    const isInApp = window.navigator.standalone === true;
-    
-    // Uygulama olarak açılmadıysa banner göster
-    if (!bannerClosed && !isStandalone && !isInApp) {
-      document.getElementById('install-banner').style.display = 'block';
-    }
-  }, 2000);
 });
 </script>
 
