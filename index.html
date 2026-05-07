@@ -945,21 +945,22 @@ window.addEventListener('beforeinstallprompt', (e) => {
 });
 
 function installApp() {
-  if (!deferredPrompt) {
-    alert('Uygulama zaten kurulu veya tarayıcınız desteklemiyor.');
-    return;
+  if (deferredPrompt) {
+    // PWA kurulum API'si varsa kullan
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then((choiceResult) => {
+      if (choiceResult.outcome === 'accepted') {
+        console.log('PWA kuruldu');
+        document.getElementById('install-banner').style.display = 'none';
+        document.getElementById('pwa-install-card').style.display = 'none';
+      }
+      deferredPrompt = null;
+      window.deferredPrompt = null;
+    });
+  } else {
+    // API yoksa manuel talimat göster
+    alert('Kurulum için:\n\n1. Chrome menüsünü (⋮) açın\n2. "Ana ekrana ekle" seçin\n3. "Yükle" veya "Ekle" deyin\n\n(iPhone: Safari Share menüsünden)');
   }
-  
-  deferredPrompt.prompt();
-  deferredPrompt.userChoice.then((choiceResult) => {
-    if (choiceResult.outcome === 'accepted') {
-      console.log('PWA kuruldu');
-      document.getElementById('install-banner').style.display = 'none';
-      document.getElementById('pwa-install-card').style.display = 'none';
-    }
-    deferredPrompt = null;
-    window.deferredPrompt = null;
-  });
 }
 
 function closeInstallBanner() {
@@ -997,6 +998,18 @@ document.addEventListener('DOMContentLoaded', () => {
       .then(reg => console.log('Service Worker kaydedildi:', reg.scope))
       .catch(err => console.log('Service Worker hatası:', err));
   }
+  
+  // Banner'ı her zaman göster (standalone modda değilse)
+  setTimeout(() => {
+    const bannerClosed = localStorage.getItem('install-banner-closed');
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+    const isInApp = window.navigator.standalone === true;
+    
+    // Uygulama olarak açılmadıysa banner göster
+    if (!bannerClosed && !isStandalone && !isInApp) {
+      document.getElementById('install-banner').style.display = 'block';
+    }
+  }, 2000);
 });
 </script>
 
