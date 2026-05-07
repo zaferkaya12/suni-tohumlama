@@ -92,9 +92,18 @@
     .alert.ok { background:#E8F5E9; color:#1B5E20; }
     .alert.error { background:#FFEBEE; color:#B71C1C; }
     .actions { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px; }
+    .stok-kutular { display:grid; grid-template-columns:repeat(auto-fit,minmax(96px,1fr)); gap:8px; margin:8px 0 12px; }
+    .stok-kutu {
+      min-height:58px; margin:0; border:2px solid transparent; color:white; font-size:15px;
+      font-weight:800; text-shadow:0 1px 2px rgba(0,0,0,.35);
+    }
+    .stok-kutu.active { border-color:#111827; box-shadow:0 0 0 3px rgba(26,107,154,.2); }
+    .stok-detay-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .stok-kutu-baslik { font-weight:800; margin:0 0 8px; }
     footer { color:var(--muted); text-align:center; font-size:12px; padding:12px; }
     @media (max-width:520px) {
-      .row, .actions { grid-template-columns:1fr; }
+      .row, .actions, .stok-detay-grid { grid-template-columns:1fr; }
+      .stok-kutular { grid-template-columns:repeat(2,1fr); }
       header h1 { font-size:17px; }
       #saatTarih { font-size:11px; }
     }
@@ -176,11 +185,42 @@
 <!-- STOK SAYFA -->
 <main id="sayfa-stok">
   <div id="stok-mesaj"></div>
+  <div class="card">
+    <div class="stok-kutu-baslik">Stok Kutusu Seç</div>
+    <div id="stok-kutu-butonlari" class="stok-kutular"></div>
+  </div>
   <form class="card" id="formStok">
+    <input type="hidden" id="inp-stok-kutu" value="1">
     <label>Boğa Adı *</label>
     <input name="boga" id="inp-stok-boga" required>
-    <label>Eklenecek Adet *</label>
-    <input name="miktar" id="inp-stok-miktar" type="number" min="1" value="1" required>
+    <div class="stok-detay-grid">
+      <div>
+        <label>Irkı</label>
+        <input name="irk" id="inp-stok-irk">
+      </div>
+      <div>
+        <label>Verim Tipi</label>
+        <select name="verim" id="inp-stok-verim">
+          <option value="Etçi">Etçi</option>
+          <option value="Sütçü">Sütçü</option>
+          <option value="Kombine">Kombine</option>
+        </select>
+      </div>
+      <div>
+        <label>Doğum Kolaylığı</label>
+        <select name="dogum" id="inp-stok-dogum">
+          <option value="Güç">Güç</option>
+          <option value="Normal" selected>Normal</option>
+          <option value="Kolay">Kolay</option>
+        </select>
+      </div>
+      <div>
+        <label>Stok Adedi *</label>
+        <input name="miktar" id="inp-stok-miktar" type="number" min="1" value="1" required>
+      </div>
+    </div>
+    <label>Payet Rengi</label>
+    <input name="payet" id="inp-stok-payet" placeholder="Örn: kırmızı, mavi, sarı">
     <button class="green" type="submit">Stoka Ekle</button>
   </form>
   <div class="card" id="stok-liste"></div>
@@ -286,6 +326,13 @@ const DB = {
     };
   }
 };
+
+const STOK_KUTU_RENKLERI = [
+  '#E53935', '#1E88E5', '#43A047', '#FB8C00', '#8E24AA',
+  '#00ACC1', '#FDD835', '#6D4C41', '#3949AB', '#00897B'
+];
+
+let seciliStokKutusu = 1;
 
 // ============= YARDIMCI FONKSİYONLAR =============
 function tarihParse(str) {
@@ -424,17 +471,28 @@ function inekEkle(kupeNo, sahipId) {
   return inek;
 }
 
-function bogaEkle(bogaAdi) {
+function bogaEkle(bogaAdi, detaylar = {}) {
   const bogalar = DB.bogalar();
   let boga = bogalar.find(b => b.boga_adi === bogaAdi);
-  if (!boga) {
+  const yeniDetaylar = {
+    irk: detaylar.irk || '',
+    verim_tipi: detaylar.verim_tipi || '',
+    dogum_kolayligi: detaylar.dogum_kolayligi || '',
+    payet_rengi: detaylar.payet_rengi || '',
+    stok_kutusu: detaylar.stok_kutusu || 1
+  };
+
+  if (boga) {
+    Object.assign(boga, yeniDetaylar);
+  } else {
     boga = {
       id: Date.now(),
-      boga_adi: bogaAdi
+      boga_adi: bogaAdi,
+      ...yeniDetaylar
     };
     bogalar.push(boga);
-    DB.set('bogalar', bogalar);
   }
+  DB.set('bogalar', bogalar);
   return boga;
 }
 
@@ -526,6 +584,11 @@ function excelIndir() {
         'Tohumlama Tarihi': tarihTR(t.tohumlama_tarihi),
         'Tahmini Doğum': tarihTR(t.dogum_tarihi),
         'Boğa': boga?.boga_adi || '',
+        'Boğa Irkı': boga?.irk || '',
+        'Verim Tipi': boga?.verim_tipi || '',
+        'Doğum Kolaylığı': boga?.dogum_kolayligi || '',
+        'Payet Rengi': boga?.payet_rengi || '',
+        'Kanister': boga?.stok_kutusu ? `${boga.stok_kutusu}. Kanister` : '',
         'Açıklama': t.aciklama
       };
     });
@@ -895,13 +958,42 @@ function kayitSil(id) {
 }
 
 // ============= STOK SAYFASI =============
+function stokKutusuSec(no) {
+  seciliStokKutusu = no;
+  document.getElementById('inp-stok-kutu').value = String(no);
+  sayfaStokYukle();
+}
+
+function stokKutuButonlariYukle() {
+  const stoklar = DB.stok();
+  const bogalar = DB.bogalar();
+  const html = STOK_KUTU_RENKLERI.map((renk, index) => {
+    const no = index + 1;
+    const toplam = bogalar
+      .filter(b => Number(b.stok_kutusu || 1) === no)
+      .reduce((sum, b) => {
+        const stok = stoklar.find(s => s.boga_id === b.id);
+        return sum + (stok ? stok.miktar : 0);
+      }, 0);
+
+    return `<button type="button" class="stok-kutu ${seciliStokKutusu === no ? 'active' : ''}"
+      style="background:${renk}" onclick="stokKutusuSec(${no})">${no}. Kanister<br><small>Stok: ${toplam}</small></button>`;
+  }).join('');
+
+  document.getElementById('stok-kutu-butonlari').innerHTML = html;
+}
+
 function sayfaStokYukle() {
   const bogalar = DB.bogalar();
   const stoklar = DB.stok();
   const tohumlamalar = DB.tohumlamalar();
+  document.getElementById('inp-stok-kutu').value = String(seciliStokKutusu);
+  stokKutuButonlariYukle();
   
   let items = '';
-  bogalar.forEach(b => {
+  bogalar
+    .filter(b => Number(b.stok_kutusu || 1) === seciliStokKutusu)
+    .forEach(b => {
     const stok = stoklar.find(s => s.boga_id === b.id);
     const miktar = stok ? stok.miktar : 0;
     const kullanim = tohumlamalar.filter(t => t.boga_id === b.id).length;
@@ -912,13 +1004,17 @@ function sayfaStokYukle() {
     items += `<div class="item">
       <b>${e(b.boga_adi)}</b>
       <span class="tag ${tag}">${e(durum)}</span><br>
+      <span>Irkı: <b>${e(b.irk || '-')}</b></span><br>
+      <span>Verim Tipi: <b>${e(b.verim_tipi || '-')}</b></span><br>
+      <span>Doğum Kolaylığı: <b>${e(b.dogum_kolayligi || '-')}</b></span><br>
+      <span>Payet Rengi: <b>${e(b.payet_rengi || '-')}</b></span><br>
       <span>Mevcut stok: <b>${e(miktar)}</b></span><br>
       <span class="muted">Toplam kullanım: ${e(kullanim)}</span>
       <button class="red" onclick="bogaSilBtn(${b.id})">Boğa Sil</button>
     </div>`;
   });
   
-  if (!items) items = '<p class="muted">Stokta boğa yok.</p>';
+  if (!items) items = `<p class="muted">${seciliStokKutusu}. Kanister içinde boğa yok.</p>`;
   document.getElementById('stok-liste').innerHTML = items;
 }
 
@@ -926,17 +1022,29 @@ document.getElementById('formStok').addEventListener('submit', e => {
   e.preventDefault();
   try {
     const bogaAd = document.getElementById('inp-stok-boga').value.trim();
+    const irk = document.getElementById('inp-stok-irk').value.trim();
+    const verimTipi = document.getElementById('inp-stok-verim').value;
+    const dogumKolayligi = document.getElementById('inp-stok-dogum').value;
     const miktar = parseInt(document.getElementById('inp-stok-miktar').value);
+    const payetRengi = document.getElementById('inp-stok-payet').value.trim();
+    const stokKutusu = parseInt(document.getElementById('inp-stok-kutu').value) || seciliStokKutusu;
     
     if (!bogaAd || miktar < 1) {
       throw new Error('Boğa adı ve miktar zorunludur.');
     }
     
-    const boga = bogaEkle(bogaAd);
+    const boga = bogaEkle(bogaAd, {
+      irk,
+      verim_tipi: verimTipi,
+      dogum_kolayligi: dogumKolayligi,
+      payet_rengi: payetRengi,
+      stok_kutusu: stokKutusu
+    });
     stokEkle(boga.id, miktar);
     
     mesajGoster('stok-mesaj', 'Stok eklendi!', 'ok');
     document.getElementById('formStok').reset();
+    document.getElementById('inp-stok-kutu').value = String(seciliStokKutusu);
     document.getElementById('inp-stok-miktar').value = '1';
     sayfaStokYukle();
     yeniKayitListeleriGuncelle();
