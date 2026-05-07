@@ -2,7 +2,7 @@
   "name": "Suni Tohumlama Takip",
   "short_name": "Tohumlama",
   "description": "Veteriner Hekim için Suni Tohumlama ve Gebelik Takip Sistemi",
-  "start_url": "index.html",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#F0F7FF",
   "theme_color": "#1A6B9A",
