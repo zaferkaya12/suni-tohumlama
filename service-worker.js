@@ -1,66 +1,66 @@
-const CACHE_NAME = 'suni-tohumlama-v4';
-const urlsToCache = [
+const CACHE_NAME = 'suni-tohumlama-v5';
+const CORE_ASSETS = [
   './',
   './index.html',
-  'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
+  './manifest.json'
 ];
 
-// Install
 self.addEventListener('install', event => {
-  console.log('[SW] Yükleniyor...');
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then(cache => {
-        console.log('[SW] Cache açıldı');
-        return cache.addAll(urlsToCache);
-      })
-      .then(() => {
-        console.log('[SW] Kurulum başarılı');
-        return self.skipWaiting();
-      })
-      .catch(err => {
-        console.error('[SW] Kurulum hatası:', err);
-      })
+      .then(cache => cache.addAll(CORE_ASSETS))
+      .then(() => self.skipWaiting())
   );
 });
 
-// Activate
 self.addEventListener('activate', event => {
-  console.log('[SW] Aktifleştiriliyor...');
   event.waitUntil(
-    caches.keys().then(cacheNames => {
-      return Promise.all(
-        cacheNames.map(cacheName => {
-          if (cacheName !== CACHE_NAME) {
-            console.log('[SW] Eski cache siliniyor:', cacheName);
-            return caches.delete(cacheName);
-          }
-        })
-      );
-    }).then(() => {
-      console.log('[SW] Aktifleştirildi');
-      return self.clients.claim();
-    })
+    caches.keys()
+      .then(cacheNames => Promise.all(
+        cacheNames
+          .filter(cacheName => cacheName !== CACHE_NAME)
+          .map(cacheName => caches.delete(cacheName))
+      ))
+      .then(() => self.clients.claim())
   );
 });
 
-// Fetch - Network first, fallback to cache
 self.addEventListener('fetch', event => {
+  const request = event.request;
+
+  if (request.method !== 'GET') {
+    return;
+  }
+
+  const url = new URL(request.url);
+
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request)
+        .catch(() => caches.match('./index.html'))
+    );
+    return;
+  }
+
+  if (url.origin !== self.location.origin) {
+    event.respondWith(fetch(request));
+    return;
+  }
+
   event.respondWith(
-    fetch(event.request)
-      .then(response => {
-        // Başarılı response - cache'e kaydet
-        if (response && response.status === 200) {
-          const responseToCache = response.clone();
-          caches.open(CACHE_NAME).then(cache => {
-            cache.put(event.request, responseToCache);
+    caches.match(request)
+      .then(cached => {
+        const networkFetch = fetch(request)
+          .then(response => {
+            if (response && response.status === 200) {
+              const copy = response.clone();
+              caches.open(CACHE_NAME).then(cache => cache.put(request, copy));
+            }
+            return response;
           });
-        }
-        return response;
+
+        return cached || networkFetch;
       })
-      .catch(() => {
-        // Network başarısız - cache'den getir
-        return caches.match(event.request);
-      })
+      .catch(() => caches.match('./index.html'))
   );
 });
