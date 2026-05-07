@@ -181,6 +181,25 @@
   <div id="ayarlar-mesaj"></div>
   
   <div class="card">
+    <h3>⚙️ Klinik Bilgileri</h3>
+    <label>Klinik Adı</label>
+    <input id="inp-klinik-adi" placeholder="Klinik adı">
+    <label>Adres</label>
+    <input id="inp-klinik-adres" placeholder="Adres">
+    <label>Telefon</label>
+    <input id="inp-klinik-tel" type="tel" placeholder="Telefon">
+    <label>Gebelik Süresi (Gün)</label>
+    <input id="inp-gebelik-gunu" type="number" min="250" max="300" value="280">
+    <button class="green" onclick="ayarlariKaydet()">💾 Kaydet</button>
+  </div>
+  
+  <div class="card" id="pwa-install-card" style="display:none;">
+    <h3>📱 Uygulamayı Kur</h3>
+    <p class="muted">Telefonunuza uygulama olarak kurun, çevrimdışı çalışır!</p>
+    <button class="green" onclick="pwaKur()">📲 Ana Ekrana Ekle</button>
+  </div>
+  
+  <div class="card">
     <h3>📦 Veritabanı Yönetimi</h3>
     <button class="green" onclick="veritabaniKaydet()">💾 Yedek Al (JSON)</button>
     <label>Yedek Yükle:</label>
@@ -574,6 +593,7 @@ function sayfaGoster(pageId) {
   else if (pageId === 'kayitlar') sayfaKayitlarYukle();
   else if (pageId === 'stok') sayfaStokYukle();
   else if (pageId === 'sahipler') sayfaSahiplerYukle();
+  else if (pageId === 'ayarlar') sayfaAyarlarYukle();
 }
 
 // ============= ÖZET SAYFASI =============
@@ -854,6 +874,80 @@ function sahipSilBtn(id) {
     mesajGoster('sahipler-mesaj', err.message, 'error');
   }
 }
+
+// ============= AYARLAR SAYFASI =============
+function sayfaAyarlarYukle() {
+  const ayarlar = DB.ayarlar();
+  document.getElementById('inp-klinik-adi').value = ayarlar.klinik_adi;
+  document.getElementById('inp-klinik-adres').value = ayarlar.klinik_adres || '';
+  document.getElementById('inp-klinik-tel').value = ayarlar.klinik_tel || '';
+  document.getElementById('inp-gebelik-gunu').value = ayarlar.gebelik_gunu || 280;
+  
+  // PWA kurulum butonunu göster
+  if (window.deferredPrompt) {
+    document.getElementById('pwa-install-card').style.display = 'block';
+  }
+}
+
+function ayarlariKaydet() {
+  try {
+    const klinikAdi = document.getElementById('inp-klinik-adi').value.trim();
+    const klinikAdres = document.getElementById('inp-klinik-adres').value.trim();
+    const klinikTel = document.getElementById('inp-klinik-tel').value.trim();
+    const gebelikGunu = parseInt(document.getElementById('inp-gebelik-gunu').value);
+    
+    if (!klinikAdi) throw new Error('Klinik adı zorunludur.');
+    if (gebelikGunu < 250 || gebelikGunu > 300) {
+      throw new Error('Gebelik süresi 250-300 gün arasında olmalıdır.');
+    }
+    
+    const ayarlar = {
+      klinik_adi: klinikAdi,
+      klinik_adres: klinikAdres,
+      klinik_tel: klinikTel,
+      gebelik_gunu: gebelikGunu
+    };
+    
+    DB.set('ayarlar', ayarlar);
+    document.getElementById('klinikAdi').textContent = klinikAdi;
+    
+    mesajGoster('ayarlar-mesaj', 'Ayarlar kaydedildi!', 'ok');
+  } catch (err) {
+    mesajGoster('ayarlar-mesaj', err.message, 'error');
+  }
+}
+
+// ============= PWA KURULUM =============
+let deferredPrompt;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  window.deferredPrompt = e;
+  document.getElementById('pwa-install-card').style.display = 'block';
+});
+
+function pwaKur() {
+  if (!deferredPrompt) {
+    alert('Uygulama zaten kurulu veya tarayıcınız desteklemiyor.');
+    return;
+  }
+  
+  deferredPrompt.prompt();
+  deferredPrompt.userChoice.then((choiceResult) => {
+    if (choiceResult.outcome === 'accepted') {
+      console.log('PWA kuruldu');
+      document.getElementById('pwa-install-card').style.display = 'none';
+    }
+    deferredPrompt = null;
+    window.deferredPrompt = null;
+  });
+}
+
+window.addEventListener('appinstalled', () => {
+  console.log('PWA başarıyla kuruldu');
+  document.getElementById('pwa-install-card').style.display = 'none';
+});
 
 // ============= NAVİGASYON ETKİNLEŞTİRME =============
 document.querySelectorAll('nav a').forEach(a => {
