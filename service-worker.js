@@ -1,14 +1,14 @@
-const CACHE_NAME = 'suni-tohumlama-v2';
+const CACHE_NAME = 'suni-tohumlama-v3';
 const urlsToCache = [
-  '/suni-tohumlama/',
-  '/suni-tohumlama/index.html',
-  '/suni-tohumlama/manifest.json',
-  '/suni-tohumlama/icon-192.png',
-  '/suni-tohumlama/icon-512.png',
+  './',
+  './index.html',
+  './manifest.json',
+  './icon-192.png',
+  './icon-512.png',
   'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
 ];
 
-// Install - Cache dosyaları
+// Install
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
@@ -20,7 +20,7 @@ self.addEventListener('install', event => {
   );
 });
 
-// Activate - Eski cache'leri temizle
+// Activate
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys().then(cacheNames => {
@@ -36,7 +36,7 @@ self.addEventListener('activate', event => {
   );
 });
 
-// Fetch - Önce cache, sonra network
+// Fetch
 self.addEventListener('fetch', event => {
   event.respondWith(
     caches.match(event.request)
@@ -45,7 +45,6 @@ self.addEventListener('fetch', event => {
           return response;
         }
         return fetch(event.request).then(response => {
-          // Cache edilebilir mi kontrol et
           if (!response || response.status !== 200 || response.type !== 'basic') {
             return response;
           }
