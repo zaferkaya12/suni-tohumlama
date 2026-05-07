@@ -196,6 +196,8 @@
       <div><label>İl</label><input name="il" id="inp-sahip-il"></div>
       <div><label>İlçe</label><input name="ilce" id="inp-sahip-ilce"></div>
     </div>
+    <label>Cep Telefonu</label>
+    <input name="telefon" id="inp-sahip-telefon" type="tel" inputmode="tel" autocomplete="tel" placeholder="05xx xxx xx xx">
     <label>Köy</label><input name="koy" id="inp-sahip-koy" list="koyler-sahip">
     <datalist id="koyler-sahip"></datalist>
     <button class="green" type="submit">Sahip Ekle</button>
@@ -370,20 +372,22 @@ function koyEkle(koyAdi) {
 }
 
 // ============= VERİ İŞLEMLERİ =============
-function sahipEkle(ad, il, ilce, koyAdi) {
+function sahipEkle(ad, il, ilce, koyAdi, telefon) {
   const sahipler = DB.sahipler();
   let sahip = sahipler.find(s => s.ad_soyad === ad);
   if (sahip) {
     sahip.il = il;
     sahip.ilce = ilce;
     sahip.koy_adi = koyAdi || '';
+    if (telefon !== undefined) sahip.telefon = telefon || '';
   } else {
     sahip = {
       id: Date.now(),
       ad_soyad: ad,
       il: il || '',
       ilce: ilce || '',
-      koy_adi: koyAdi || ''
+      koy_adi: koyAdi || '',
+      telefon: telefon || ''
     };
     sahipler.push(sahip);
   }
@@ -517,6 +521,7 @@ function excelIndir() {
         'İl': sahip?.il || '',
         'İlçe': sahip?.ilce || '',
         'Köy': sahip?.koy_adi || '',
+        'Cep Telefonu': sahip?.telefon || '',
         'Küpe No': t.kupe_no,
         'Tohumlama Tarihi': tarihTR(t.tohumlama_tarihi),
         'Tahmini Doğum': tarihTR(t.dogum_tarihi),
@@ -966,6 +971,7 @@ function sayfaSahiplerYukle() {
     items += `<div class="item">
       <b>${e(s.ad_soyad)}</b><br>
       <span class="muted">${e(s.il)} ${e(s.ilce)} ${e(s.koy_adi)}</span><br>
+      <span>Cep: <b>${e(s.telefon || '-')}</b></span><br>
       <span>Kayıt: ${kayitlar.length}</span><br>
       <span class="muted">Küpeler: ${e(kupeler)}</span>
       <button class="red" onclick="sahipSilBtn(${s.id})">Sil</button>
@@ -982,11 +988,12 @@ document.getElementById('formSahip').addEventListener('submit', e => {
     const ad = document.getElementById('inp-sahip-ad').value.trim();
     const il = document.getElementById('inp-sahip-il').value.trim();
     const ilce = document.getElementById('inp-sahip-ilce').value.trim();
+    const telefon = document.getElementById('inp-sahip-telefon').value.trim();
     const koy = document.getElementById('inp-sahip-koy').value.trim();
     
     if (!ad) throw new Error('Ad soyad zorunludur.');
     
-    sahipEkle(ad, il, ilce, koy);
+    sahipEkle(ad, il, ilce, koy, telefon);
     mesajGoster('sahipler-mesaj', 'Sahip kaydedildi!', 'ok');
     document.getElementById('formSahip').reset();
     sayfaSahiplerYukle();
