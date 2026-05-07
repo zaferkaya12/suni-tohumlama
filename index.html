@@ -105,8 +105,9 @@
   <div id="kayit-mesaj"></div>
   <form class="card" id="formKayit">
     <label>Hayvan Sahibi *</label>
-    <input name="sahip" id="inp-sahip" list="sahipler" required autocomplete="off">
-    <datalist id="sahipler"></datalist>
+    <select name="sahip" id="inp-sahip" required>
+      <option value="">Sahip secin</option>
+    </select>
     
     <div class="row">
       <div><label>İl</label><input name="il" id="inp-il" autocomplete="address-level1"></div>
@@ -125,8 +126,9 @@
     <input name="tarih" id="inp-tarih" type="date" required>
     
     <label>Kullanılan Boğa *</label>
-    <input name="boga" id="inp-boga" list="bogalar" required autocomplete="off">
-    <datalist id="bogalar"></datalist>
+    <select name="boga" id="inp-boga" required>
+      <option value="">Boga secin</option>
+    </select>
     
     <label>Açıklama</label>
     <textarea name="aciklama" id="inp-aciklama"></textarea>
@@ -648,19 +650,45 @@ function sayfaOzetYukle() {
 }
 
 // ============= YENİ KAYIT SAYFASI =============
-function sayfaKayitYukle() {
+function optionHtml(value) {
+  return `<option value="${e(value)}">${e(value)}</option>`;
+}
+
+function yeniKayitListeleriGuncelle() {
+  const sahipSelect = document.getElementById('inp-sahip');
+  const bogaSelect = document.getElementById('inp-boga');
+  const seciliSahip = sahipSelect.value;
+  const seciliBoga = bogaSelect.value;
+
   const sahipler = DB.sahipler().map(s => s.ad_soyad).sort();
   const inekler = DB.inekler().map(i => i.kupe_no).sort();
   const bogalar = DB.bogalar().map(b => b.boga_adi).sort();
-  
-  document.getElementById('sahipler').innerHTML = sahipler.map(s => `<option value="${e(s)}">`).join('');
+
+  sahipSelect.innerHTML = '<option value="">Sahip secin</option>' + sahipler.map(optionHtml).join('');
+  bogaSelect.innerHTML = '<option value="">Boga secin</option>' + bogalar.map(optionHtml).join('');
+  if (sahipler.includes(seciliSahip)) sahipSelect.value = seciliSahip;
+  if (bogalar.includes(seciliBoga)) bogaSelect.value = seciliBoga;
+
   document.getElementById('kupeler').innerHTML = inekler.map(k => `<option value="${e(k)}">`).join('');
-  document.getElementById('bogalar').innerHTML = bogalar.map(b => `<option value="${e(b)}">`).join('');
-  
+}
+
+function sahipBilgileriniDoldur() {
+  const sahipAd = document.getElementById('inp-sahip').value;
+  const sahip = DB.sahipler().find(s => s.ad_soyad === sahipAd);
+  if (!sahip) return;
+
+  document.getElementById('inp-il').value = sahip.il || '';
+  document.getElementById('inp-ilce').value = sahip.ilce || '';
+  document.getElementById('inp-koy').value = sahip.koy_adi || '';
+}
+
+function sayfaKayitYukle() {
+  yeniKayitListeleriGuncelle();
   koyListesiYukle();
-  
   document.getElementById('inp-tarih').value = new Date().toISOString().split('T')[0];
 }
+
+document.getElementById('inp-sahip').addEventListener('change', sahipBilgileriniDoldur);
 
 document.getElementById('formKayit').addEventListener('submit', e => {
   e.preventDefault();
@@ -809,6 +837,7 @@ document.getElementById('formStok').addEventListener('submit', e => {
     document.getElementById('formStok').reset();
     document.getElementById('inp-stok-miktar').value = '1';
     sayfaStokYukle();
+    yeniKayitListeleriGuncelle();
   } catch (err) {
     mesajGoster('stok-mesaj', err.message, 'error');
   }
@@ -820,6 +849,7 @@ function bogaSilBtn(id) {
     bogaSil(id);
     mesajGoster('stok-mesaj', 'Boğa silindi.', 'ok');
     sayfaStokYukle();
+    yeniKayitListeleriGuncelle();
   } catch (err) {
     mesajGoster('stok-mesaj', err.message, 'error');
   }
@@ -863,6 +893,7 @@ document.getElementById('formSahip').addEventListener('submit', e => {
     mesajGoster('sahipler-mesaj', 'Sahip kaydedildi!', 'ok');
     document.getElementById('formSahip').reset();
     sayfaSahiplerYukle();
+    yeniKayitListeleriGuncelle();
   } catch (err) {
     mesajGoster('sahipler-mesaj', err.message, 'error');
   }
@@ -874,12 +905,23 @@ function sahipSilBtn(id) {
     sahipSil(id);
     mesajGoster('sahipler-mesaj', 'Sahip silindi.', 'ok');
     sayfaSahiplerYukle();
+    yeniKayitListeleriGuncelle();
   } catch (err) {
     mesajGoster('sahipler-mesaj', err.message, 'error');
   }
 }
 
 // ============= AYARLAR SAYFASI =============
+function isIosDevice() {
+  return /iphone|ipad|ipod/i.test(navigator.userAgent) ||
+         (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
+function isStandaloneMode() {
+  return window.matchMedia('(display-mode: standalone)').matches ||
+         window.navigator.standalone === true;
+}
+
 function sayfaAyarlarYukle() {
   const ayarlar = DB.ayarlar();
   document.getElementById('inp-klinik-adi').value = ayarlar.klinik_adi;
@@ -888,7 +930,7 @@ function sayfaAyarlarYukle() {
   document.getElementById('inp-gebelik-gunu').value = ayarlar.gebelik_gunu || 280;
   
   // PWA kurulum butonunu göster
-  if (window.deferredPrompt) {
+  if (window.deferredPrompt || (isIosDevice() && !isStandaloneMode())) {
     document.getElementById('pwa-install-card').style.display = 'block';
   }
 }
@@ -933,6 +975,11 @@ window.addEventListener('beforeinstallprompt', (e) => {
 
 function pwaKur() {
   if (!deferredPrompt) {
+    if (isIosDevice()) {
+      alert('iPhone/iPad kurulumu icin:\n\n1. Bu siteyi Safari ile acin\n2. Paylas dugmesine basin\n3. "Ana Ekrana Ekle" secin\n4. Ekle deyin');
+      return;
+    }
+
     alert('Uygulama zaten kurulu veya tarayıcınız desteklemiyor.');
     return;
   }
