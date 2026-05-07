@@ -66,6 +66,22 @@
     .btn.red, button.red { background:var(--red); }
     .btn.light { background:#EAF5FF; color:var(--header); border:1px solid var(--border); }
     .row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+    .autocomplete { position:relative; }
+    .autocomplete-list {
+      display:none; position:absolute; left:0; right:0; top:calc(100% + 2px); z-index:20;
+      max-height:220px; overflow:auto; background:white; border:1px solid var(--border);
+      border-radius:8px; box-shadow:0 8px 18px rgba(0,0,0,.14);
+    }
+    .autocomplete-option {
+      width:100%; min-height:40px; margin:0; border:0; border-radius:0; background:white;
+      color:var(--text); text-align:left; font-weight:400; padding:9px 10px;
+    }
+    .autocomplete-option:active, .autocomplete-option:hover { background:#EAF5FF; color:var(--header); }
+    .header-row { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
+    #saatTarih {
+      flex:0 0 auto; text-align:right; color:#D7ECFA; font-size:12px; line-height:1.35;
+      font-weight:700; white-space:nowrap; padding-top:1px;
+    }
     .item { border-top:1px solid var(--border); padding:10px 0; }
     .item:first-child { border-top:0; }
     .tag { display:inline-block; border-radius:8px; padding:4px 7px; font-size:12px; font-weight:700; }
@@ -80,13 +96,17 @@
     @media (max-width:520px) {
       .row, .actions { grid-template-columns:1fr; }
       header h1 { font-size:17px; }
+      #saatTarih { font-size:11px; }
     }
   </style>
 </head>
 <body>
 
 <header>
-  <h1 id="klinikAdi">AVCI VETERİNER KLİNİĞİ</h1>
+  <div class="header-row">
+    <h1 id="klinikAdi">AVCI VETERİNER KLİNİĞİ</h1>
+    <div id="saatTarih" aria-live="polite"></div>
+  </div>
   <p id="sayfaBaslik">Özet</p>
 </header>
 
@@ -105,9 +125,10 @@
   <div id="kayit-mesaj"></div>
   <form class="card" id="formKayit">
     <label>Hayvan Sahibi *</label>
-    <select name="sahip" id="inp-sahip" required>
-      <option value="">Sahip secin</option>
-    </select>
+    <div class="autocomplete">
+      <input name="sahip" id="inp-sahip" required autocomplete="off" placeholder="Sahip adi yazin veya secin">
+      <div id="sahip-oneriler" class="autocomplete-list"></div>
+    </div>
     
     <div class="row">
       <div><label>İl</label><input name="il" id="inp-il" autocomplete="address-level1"></div>
@@ -126,9 +147,10 @@
     <input name="tarih" id="inp-tarih" type="date" required>
     
     <label>Kullanılan Boğa *</label>
-    <select name="boga" id="inp-boga" required>
-      <option value="">Boga secin</option>
-    </select>
+    <div class="autocomplete">
+      <input name="boga" id="inp-boga" required autocomplete="off" placeholder="Boga adi yazin veya secin">
+      <div id="boga-oneriler" class="autocomplete-list"></div>
+    </div>
     
     <label>Açıklama</label>
     <textarea name="aciklama" id="inp-aciklama"></textarea>
@@ -309,6 +331,25 @@ function mesajGoster(containerId, mesaj, tip) {
   }
   div.innerHTML = `<div class="alert ${tip}">${e(mesaj)}</div>`;
   setTimeout(() => div.innerHTML = '', 3000);
+}
+
+function saatTarihGuncelle() {
+  const el = document.getElementById('saatTarih');
+  if (!el) return;
+
+  const now = new Date();
+  const tarih = now.toLocaleDateString('tr-TR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  });
+  const saat = now.toLocaleTimeString('tr-TR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  });
+
+  el.innerHTML = `${tarih}<br>${saat}`;
 }
 
 // ============= KÖY YÖNETİMİ =============
@@ -650,26 +691,63 @@ function sayfaOzetYukle() {
 }
 
 // ============= YENİ KAYIT SAYFASI =============
-function optionHtml(value) {
-  return `<option value="${e(value)}">${e(value)}</option>`;
+function aramaMetni(value) {
+  return String(value || '').toLocaleLowerCase('tr-TR');
+}
+
+function autocompleteGoster(inputId, listeId, kaynakListe, secimCallback) {
+  const input = document.getElementById(inputId);
+  const liste = document.getElementById(listeId);
+  const q = aramaMetni(input.value);
+  const eslesenler = kaynakListe
+    .filter(item => !q || aramaMetni(item).includes(q))
+    .slice(0, 60);
+
+  if (eslesenler.length === 0) {
+    liste.style.display = 'none';
+    liste.innerHTML = '';
+    return;
+  }
+
+  liste.innerHTML = eslesenler
+    .map(item => `<button type="button" class="autocomplete-option" data-value="${e(item)}">${e(item)}</button>`)
+    .join('');
+  liste.style.display = 'block';
+
+  liste.querySelectorAll('.autocomplete-option').forEach(btn => {
+    btn.addEventListener('mousedown', event => {
+      event.preventDefault();
+      input.value = btn.getAttribute('data-value');
+      liste.style.display = 'none';
+      if (secimCallback) secimCallback();
+    });
+  });
+}
+
+function autocompleteGizle(listeId) {
+  setTimeout(() => {
+    const liste = document.getElementById(listeId);
+    if (liste) liste.style.display = 'none';
+  }, 150);
 }
 
 function yeniKayitListeleriGuncelle() {
-  const sahipSelect = document.getElementById('inp-sahip');
-  const bogaSelect = document.getElementById('inp-boga');
-  const seciliSahip = sahipSelect.value;
-  const seciliBoga = bogaSelect.value;
-
   const sahipler = DB.sahipler().map(s => s.ad_soyad).sort();
   const inekler = DB.inekler().map(i => i.kupe_no).sort();
   const bogalar = DB.bogalar().map(b => b.boga_adi).sort();
 
-  sahipSelect.innerHTML = '<option value="">Sahip secin</option>' + sahipler.map(optionHtml).join('');
-  bogaSelect.innerHTML = '<option value="">Boga secin</option>' + bogalar.map(optionHtml).join('');
-  if (sahipler.includes(seciliSahip)) sahipSelect.value = seciliSahip;
-  if (bogalar.includes(seciliBoga)) bogaSelect.value = seciliBoga;
-
   document.getElementById('kupeler').innerHTML = inekler.map(k => `<option value="${e(k)}">`).join('');
+  if (document.activeElement?.id === 'inp-sahip') {
+    autocompleteGoster('inp-sahip', 'sahip-oneriler', sahipler, sahipBilgileriniDoldur);
+  } else {
+    document.getElementById('sahip-oneriler').style.display = 'none';
+  }
+
+  if (document.activeElement?.id === 'inp-boga') {
+    autocompleteGoster('inp-boga', 'boga-oneriler', bogalar);
+  } else {
+    document.getElementById('boga-oneriler').style.display = 'none';
+  }
 }
 
 function sahipBilgileriniDoldur() {
@@ -688,7 +766,26 @@ function sayfaKayitYukle() {
   document.getElementById('inp-tarih').value = new Date().toISOString().split('T')[0];
 }
 
+document.getElementById('inp-sahip').addEventListener('input', () => {
+  const sahipler = DB.sahipler().map(s => s.ad_soyad).sort();
+  autocompleteGoster('inp-sahip', 'sahip-oneriler', sahipler, sahipBilgileriniDoldur);
+});
+document.getElementById('inp-sahip').addEventListener('focus', () => {
+  const sahipler = DB.sahipler().map(s => s.ad_soyad).sort();
+  autocompleteGoster('inp-sahip', 'sahip-oneriler', sahipler, sahipBilgileriniDoldur);
+});
+document.getElementById('inp-sahip').addEventListener('blur', () => autocompleteGizle('sahip-oneriler'));
 document.getElementById('inp-sahip').addEventListener('change', sahipBilgileriniDoldur);
+
+document.getElementById('inp-boga').addEventListener('input', () => {
+  const bogalar = DB.bogalar().map(b => b.boga_adi).sort();
+  autocompleteGoster('inp-boga', 'boga-oneriler', bogalar);
+});
+document.getElementById('inp-boga').addEventListener('focus', () => {
+  const bogalar = DB.bogalar().map(b => b.boga_adi).sort();
+  autocompleteGoster('inp-boga', 'boga-oneriler', bogalar);
+});
+document.getElementById('inp-boga').addEventListener('blur', () => autocompleteGizle('boga-oneriler'));
 
 document.getElementById('formKayit').addEventListener('submit', e => {
   e.preventDefault();
@@ -1012,6 +1109,8 @@ document.querySelectorAll('nav a').forEach(a => {
 document.addEventListener('DOMContentLoaded', () => {
   const ayarlar = DB.ayarlar();
   document.getElementById('klinikAdi').textContent = ayarlar.klinik_adi;
+  saatTarihGuncelle();
+  setInterval(saatTarihGuncelle, 1000);
   sayfaGoster('ozet');
 
   if ('serviceWorker' in navigator) {
