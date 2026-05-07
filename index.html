@@ -86,6 +86,18 @@
   <p id="sayfaBaslik">Özet</p>
 </header>
 
+<!-- OTOMATİK KURULUM BANNER -->
+<div id="install-banner" style="display:none; position:fixed; bottom:70px; left:0; right:0; z-index:999; background:#1A6B9A; color:white; padding:16px; box-shadow:0 -2px 10px rgba(0,0,0,0.2);">
+  <div style="max-width:600px; margin:0 auto; display:flex; align-items:center; gap:12px;">
+    <div style="flex:1;">
+      <b style="display:block; margin-bottom:4px;">📱 Uygulamayı Kur</b>
+      <span style="font-size:13px; opacity:0.9;">Telefonunuza kurun, çevrimdışı çalışır!</span>
+    </div>
+    <button onclick="installApp()" style="background:white; color:#1A6B9A; border:none; padding:10px 20px; border-radius:8px; font-weight:700; font-size:14px; cursor:pointer; min-width:80px;">Kur</button>
+    <button onclick="closeInstallBanner()" style="background:transparent; color:white; border:1px solid white; padding:10px 16px; border-radius:8px; font-weight:700; font-size:14px; cursor:pointer;">✕</button>
+  </div>
+</div>
+
 <!-- ÖZET SAYFA -->
 <main id="sayfa-ozet" class="active">
   <div id="ozet-istatistikler"></div>
@@ -924,10 +936,15 @@ window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   deferredPrompt = e;
   window.deferredPrompt = e;
+  
+  // Otomatik banner göster
+  document.getElementById('install-banner').style.display = 'block';
+  
+  // Ayarlar sayfası kartını da göster
   document.getElementById('pwa-install-card').style.display = 'block';
 });
 
-function pwaKur() {
+function installApp() {
   if (!deferredPrompt) {
     alert('Uygulama zaten kurulu veya tarayıcınız desteklemiyor.');
     return;
@@ -937,6 +954,7 @@ function pwaKur() {
   deferredPrompt.userChoice.then((choiceResult) => {
     if (choiceResult.outcome === 'accepted') {
       console.log('PWA kuruldu');
+      document.getElementById('install-banner').style.display = 'none';
       document.getElementById('pwa-install-card').style.display = 'none';
     }
     deferredPrompt = null;
@@ -944,8 +962,18 @@ function pwaKur() {
   });
 }
 
+function closeInstallBanner() {
+  document.getElementById('install-banner').style.display = 'none';
+  localStorage.setItem('install-banner-closed', 'true');
+}
+
+function pwaKur() {
+  installApp();
+}
+
 window.addEventListener('appinstalled', () => {
   console.log('PWA başarıyla kuruldu');
+  document.getElementById('install-banner').style.display = 'none';
   document.getElementById('pwa-install-card').style.display = 'none';
 });
 
