@@ -1,5 +1,5 @@
 
-# Suni Tohumlama ve Takip Programı
+# Suni Tohumlama Takip Programı
 
 Bu proje, Serbest (Klinisyen) Veteriner Hekimler için suni tohumlama süreçlerinin, istatistiklerinin ve veri takibinin dijital ortamda, hızlı ve pratik bir şekilde yönetilebilmesi amacıyla geliştirilmiş bir mobil/web uygulamasıdır.
 
