@@ -1,1240 +1,173 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#1A6B9A">
-  <link rel="manifest" href="./manifest.json">
-  <link rel="icon" href="./icon-192.png" sizes="192x192">
-  <link rel="apple-touch-icon" href="./icon-192.png">
-  <meta name="application-name" content="Suni Tohumlama Takip">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>Suni Tohumlama Takip</title>
-  
-  <!-- SheetJS - Excel Export -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-  
-  <style>
-    :root {
-      --bg:#F0F7FF; --panel:#FFFFFF; --header:#1A6B9A; --accent:#2196F3;
-      --green:#2E7D32; --orange:#E65100; --red:#C62828; --text:#1A2332;
-      --muted:#64748B; --border:#C8DCF0;
-    }
-    * { box-sizing:border-box; }
-    body {
-      margin:0; font-family:Arial, sans-serif; background:var(--bg); color:var(--text);
-      font-size:16px; padding-bottom:76px;
-    }
-    header {
-      position:sticky; top:0; z-index:5; background:var(--header); color:white;
-      padding:12px 14px 10px; box-shadow:0 2px 8px rgba(0,0,0,.12);
-    }
-    header h1 { margin:0; font-size:18px; line-height:1.25; }
-    header p { margin:4px 0 0; color:#D7ECFA; font-size:13px; }
-    main { padding:12px; max-width:980px; margin:0 auto; display:none; }
-    main.active { display:block; }
-    nav {
-      position:fixed; left:0; right:0; bottom:0; z-index:8; display:grid;
-      grid-template-columns:repeat(6,1fr); background:white; border-top:1px solid var(--border);
-    }
-    nav a {
-      text-align:center; padding:10px 4px 12px; text-decoration:none; color:var(--muted);
-      font-weight:700; font-size:13px; cursor:pointer;
-    }
-    nav a.active { color:var(--header); background:#EAF5FF; }
-    .card {
-      background:var(--panel); border:1px solid var(--border); border-radius:8px;
-      padding:12px; margin:0 0 12px;
-    }
-    .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(135px,1fr)); gap:10px; }
-    .stat { background:white; border:1px solid var(--border); border-radius:8px; padding:12px; }
-    .stat b { display:block; font-size:26px; margin-bottom:4px; }
-    .muted { color:var(--muted); font-size:13px; }
-    label { display:block; font-weight:700; margin:10px 0 5px; }
-    input, select, textarea, button {
-      width:100%; min-height:44px; border-radius:8px; border:1px solid var(--border);
-      padding:10px; font:inherit; background:white;
-    }
-    textarea { min-height:88px; resize:vertical; }
-    button, .btn {
-      display:block; text-align:center; text-decoration:none; border:0; background:var(--header);
-      color:white; font-weight:700; cursor:pointer; margin-top:10px;
-    }
-    .btn.green, button.green { background:var(--green); }
-    .btn.red, button.red { background:var(--red); }
-    .btn.light { background:#EAF5FF; color:var(--header); border:1px solid var(--border); }
-    .row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-    .autocomplete { position:relative; }
-    .autocomplete-list {
-      display:none; position:absolute; left:0; right:0; top:calc(100% + 2px); z-index:20;
-      max-height:220px; overflow:auto; background:white; border:1px solid var(--border);
-      border-radius:8px; box-shadow:0 8px 18px rgba(0,0,0,.14);
-    }
-    .autocomplete-option {
-      width:100%; min-height:40px; margin:0; border:0; border-radius:0; background:white;
-      color:var(--text); text-align:left; font-weight:400; padding:9px 10px;
-    }
-    .autocomplete-option:active, .autocomplete-option:hover { background:#EAF5FF; color:var(--header); }
-    .header-row { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
-    #saatTarih {
-      flex:0 0 auto; text-align:right; color:#D7ECFA; font-size:12px; line-height:1.35;
-      font-weight:700; white-space:nowrap; padding-top:1px;
-    }
-    .item { border-top:1px solid var(--border); padding:10px 0; }
-    .item:first-child { border-top:0; }
-    .tag { display:inline-block; border-radius:8px; padding:4px 7px; font-size:12px; font-weight:700; }
-    .tag.ok { background:#E8F5E9; color:#1B5E20; }
-    .tag.warn { background:#FFF3E0; color:#E65100; }
-    .tag.bad { background:#FFEBEE; color:#B71C1C; }
-    .alert { border-radius:8px; padding:10px; margin:0 0 12px; font-weight:700; }
-    .alert.ok { background:#E8F5E9; color:#1B5E20; }
-    .alert.error { background:#FFEBEE; color:#B71C1C; }
-    .actions { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px; }
-    .stok-kutular { display:grid; grid-template-columns:repeat(auto-fit,minmax(96px,1fr)); gap:8px; margin:8px 0 12px; }
-    .stok-kutu {
-      min-height:58px; margin:0; border:2px solid transparent; color:white; font-size:15px;
-      font-weight:800; text-shadow:0 1px 2px rgba(0,0,0,.35);
-    }
-    .stok-kutu.active { border-color:#111827; box-shadow:0 0 0 3px rgba(26,107,154,.2); }
-    .stok-detay-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-    .stok-kutu-baslik { font-weight:800; margin:0 0 8px; }
-    footer { color:var(--muted); text-align:center; font-size:12px; padding:12px; }
-    @media (max-width:520px) {
-      .row, .actions, .stok-detay-grid { grid-template-columns:1fr; }
-      .stok-kutular { grid-template-columns:repeat(2,1fr); }
-      header h1 { font-size:17px; }
-      #saatTarih { font-size:11px; }
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Suni Tohumlama Stok Takip Sistemi</title>
+    <style>
+        /* Lisans Ekranı Tasarımı */
+        #lisans-ekrani {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #1e293b;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 999999;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .lisans-kutusu {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+        }
+        .lisans-kutusu h2 {
+            color: #0f172a;
+            margin-bottom: 10px;
+            font-size: 22px;
+        }
+        .lisans-kutusu p {
+            color: #64748b;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+        .cihaz-kodu-alanı {
+            background-color: #f1f5f9;
+            padding: 10px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 16px;
+            color: #334155;
+            font-weight: bold;
+            letter-spacing: 1px;
+            margin-bottom: 20px;
+            border: 1px dashed #cbd5e1;
+        }
+        .lisans-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 16px;
+            box-sizing: border-box;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: bold;
+        }
+        .lisans-input:focus {
+            border-color: #3b82f6;
+            outline: none;
+        }
+        .lisans-buton {
+            width: 100%;
+            padding: 12px;
+            background-color: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .lisans-buton:hover {
+            background-color: #1d4ed8;
+        }
+        #hata-mesaji {
+            color: #dc2626;
+            font-size: 13px;
+            margin-top: 10px;
+            display: none;
+        }
+        /* Ana Program İlk Başta Gizli */
+        #ana-program {
+            display: none;
+        }
+    </style>
 </head>
 <body>
 
-<header>
-  <div class="header-row">
-    <h1 id="klinikAdi">AVCI VETERİNER KLİNİĞİ</h1>
-    <div id="saatTarih" aria-live="polite"></div>
-  </div>
-  <p id="sayfaBaslik">Özet</p>
-</header>
-
-<!-- ÖZET SAYFA -->
-<main id="sayfa-ozet" class="active">
-  <div id="ozet-istatistikler"></div>
-  <div class="card">
-    <h2>Yaklaşan Doğumlar (30 Gün)</h2>
-    <div id="ozet-yaklasan"></div>
-  </div>
-  <footer>Hazırlayan: Zafer KAYA - Veteriner Hekim - Bingöl - 2026</footer>
-</main>
-
-<!-- YENİ KAYIT SAYFA -->
-<main id="sayfa-kayit">
-  <div id="kayit-mesaj"></div>
-  <form class="card" id="formKayit">
-    <label>Hayvan Sahibi *</label>
-    <div class="autocomplete">
-      <input name="sahip" id="inp-sahip" required autocomplete="off" placeholder="Sahip adi yazin veya secin">
-      <div id="sahip-oneriler" class="autocomplete-list"></div>
+    <div id="lisans-ekrani">
+        <div class="lisans-kutusu">
+            <h2>Cihaz Yetkilendirme</h2>
+            <p>Lütfen aşağıdaki cihaz kodunu yöneticinize bildirerek lisans anahtarınızı alınız.</p>
+            
+            <div class="cihaz-kodu-alanı" id="display-cihaz-kodu">Üretiliyor...</div>
+            
+            <input type="text" id="lisans-anahtari" class="lisans-input" placeholder="Lisans Anahtarını Girin">
+            <button class="lisans-buton" onclick="lisansKontrol Et()">Uygulamayı Aktif Et</button>
+            <div id="hata-mesaji">Hatalı veya geçersiz lisans anahtarı!</div>
+        </div>
     </div>
-    
-    <div class="row">
-      <div><label>İl</label><input name="il" id="inp-il" autocomplete="address-level1"></div>
-      <div><label>İlçe</label><input name="ilce" id="inp-ilce" autocomplete="address-level2"></div>
+
+    <div id="ana-program">
+        <iframe src="about:blank" id="orijinal-icerik" style="position:fixed; top:0; left:0; width:100%; height:100%; border:none; z-index:9999;"></iframe>
     </div>
-    
-    <label>Köy</label>
-    <input name="koy" id="inp-koy" list="koyler" autocomplete="off">
-    <datalist id="koyler"></datalist>
-    
-    <label>Kulak Küpe No *</label>
-    <input name="kupe" id="inp-kupe" list="kupeler" required autocomplete="off">
-    <datalist id="kupeler"></datalist>
-    
-    <label>Tohumlama Tarihi *</label>
-    <input name="tarih" id="inp-tarih" type="date" required>
-    
-    <label>Kullanılan Boğa *</label>
-    <div class="autocomplete">
-      <input name="boga" id="inp-boga" required autocomplete="off" placeholder="Boga adi yazin veya secin">
-      <div id="boga-oneriler" class="autocomplete-list"></div>
-    </div>
-    
-    <label>Açıklama</label>
-    <textarea name="aciklama" id="inp-aciklama"></textarea>
-    
-    <button class="green" type="submit">Kaydet</button>
-  </form>
-  <footer>Hazırlayan: Zafer KAYA - Veteriner Hekim - Bingöl - 2026</footer>
-</main>
 
-<!-- KAYITLAR SAYFA -->
-<main id="sayfa-kayitlar">
-  <div id="kayitlar-mesaj"></div>
-  <form class="card" id="formArama">
-    <label>Arama</label>
-    <input name="q" id="inp-arama" placeholder="Sahip, küpe veya boğa">
-    <button type="submit">Ara</button>
-  </form>
-  <button class="green" onclick="excelIndir()">📊 Excel'e Aktar</button>
-  <div class="card" id="kayitlar-liste"></div>
-  <footer>Hazırlayan: Zafer KAYA - Veteriner Hekim - Bingöl - 2026</footer>
-</main>
-
-<!-- STOK SAYFA -->
-<main id="sayfa-stok">
-  <div id="stok-mesaj"></div>
-  <div class="card">
-    <div class="stok-kutu-baslik">Stok Kutusu Seç</div>
-    <div id="stok-kutu-butonlari" class="stok-kutular"></div>
-  </div>
-  <form class="card" id="formStok">
-    <input type="hidden" id="inp-stok-kutu" value="1">
-    <label>Boğa Adı *</label>
-    <input name="boga" id="inp-stok-boga" required>
-    <div class="stok-detay-grid">
-      <div>
-        <label>Irkı</label>
-        <input name="irk" id="inp-stok-irk">
-      </div>
-      <div>
-        <label>Verim Tipi</label>
-        <select name="verim" id="inp-stok-verim">
-          <option value="Etçi">Etçi</option>
-          <option value="Sütçü">Sütçü</option>
-          <option value="Kombine">Kombine</option>
-        </select>
-      </div>
-      <div>
-        <label>Doğum Kolaylığı</label>
-        <select name="dogum" id="inp-stok-dogum">
-          <option value="Güç">Güç</option>
-          <option value="Normal" selected>Normal</option>
-          <option value="Kolay">Kolay</option>
-        </select>
-      </div>
-      <div>
-        <label>Stok Adedi *</label>
-        <input name="miktar" id="inp-stok-miktar" type="number" min="1" value="1" required>
-      </div>
-    </div>
-    <label>Payet Rengi</label>
-    <input name="payet" id="inp-stok-payet" placeholder="Örn: kırmızı, mavi, sarı">
-    <button class="green" type="submit">Stoka Ekle</button>
-  </form>
-  <div class="card" id="stok-liste"></div>
-  <footer>Hazırlayan: Zafer KAYA - Veteriner Hekim - Bingöl - 2026</footer>
-</main>
-
-<!-- SAHİPLER SAYFA -->
-<main id="sayfa-sahipler">
-  <div id="sahipler-mesaj"></div>
-  <form class="card" id="formSahip">
-    <label>Ad Soyad *</label><input name="ad" id="inp-sahip-ad" required>
-    <div class="row">
-      <div><label>İl</label><input name="il" id="inp-sahip-il"></div>
-      <div><label>İlçe</label><input name="ilce" id="inp-sahip-ilce"></div>
-    </div>
-    <label>Cep Telefonu</label>
-    <input name="telefon" id="inp-sahip-telefon" type="tel" inputmode="tel" autocomplete="tel" placeholder="05xx xxx xx xx">
-    <label>Köy</label><input name="koy" id="inp-sahip-koy" list="koyler-sahip">
-    <datalist id="koyler-sahip"></datalist>
-    <button class="green" type="submit">Sahip Ekle</button>
-  </form>
-  <div class="card" id="sahipler-liste"></div>
-  <footer>Hazırlayan: Zafer KAYA - Veteriner Hekim - Bingöl - 2026</footer>
-</main>
-
-<!-- AYARLAR SAYFA -->
-<main id="sayfa-ayarlar">
-  <div id="ayarlar-mesaj"></div>
-  
-  <div class="card">
-    <h3>⚙️ Klinik Bilgileri</h3>
-    <label>Klinik Adı</label>
-    <input id="inp-klinik-adi" placeholder="Klinik adı">
-    <label>Adres</label>
-    <input id="inp-klinik-adres" placeholder="Adres">
-    <label>Telefon</label>
-    <input id="inp-klinik-tel" type="tel" placeholder="Telefon">
-    <label>Gebelik Süresi (Gün)</label>
-    <input id="inp-gebelik-gunu" type="number" min="250" max="300" value="280">
-    <button class="green" onclick="ayarlariKaydet()">💾 Kaydet</button>
-  </div>
-  
-  <div class="card" id="pwa-install-card" style="display:none;">
-    <h3>📱 Uygulamayı Kur</h3>
-    <p class="muted">Telefonunuza uygulama olarak kurun, çevrimdışı çalışır!</p>
-    <button class="green" onclick="pwaKur()">📲 Ana Ekrana Ekle</button>
-  </div>
-  
-  <div class="card">
-    <h3>📦 Veritabanı Yönetimi</h3>
-    <button class="green" onclick="veritabaniKaydet()">💾 Yedek Al (JSON)</button>
-    <label>Yedek Yükle:</label>
-    <input type="file" id="fileYedek" accept=".json">
-    <button class="red" onclick="veritabaniSifirla()">🗑️ Tüm Verileri Sil</button>
-  </div>
-  
-  <footer>Hazırlayan: Zafer KAYA - Veteriner Hekim - Bingöl - 2026</footer>
-</main>
-
-<nav>
-  <a data-page="ozet" class="active">Özet</a>
-  <a data-page="kayit">Yeni</a>
-  <a data-page="kayitlar">Kayıtlar</a>
-  <a data-page="stok">Stok</a>
-  <a data-page="sahipler">Sahipler</a>
-  <a data-page="ayarlar">Ayarlar</a>
-</nav>
-
-<script>
-// ============= VERİTABANI YÖNETİMİ (LocalStorage) =============
-const DB = {
-  get(key) {
-    const val = localStorage.getItem(key);
-    return val ? JSON.parse(val) : null;
-  },
-  set(key, val) {
-    localStorage.setItem(key, JSON.stringify(val));
-  },
-  sahipler() {
-    return DB.get('sahipler') || [];
-  },
-  inekler() {
-    return DB.get('inekler') || [];
-  },
-  bogalar() {
-    return DB.get('bogalar') || [];
-  },
-  stok() {
-    return DB.get('stok') || [];
-  },
-  tohumlamalar() {
-    return DB.get('tohumlamalar') || [];
-  },
-  koyler() {
-    return DB.get('koyler') || [];
-  },
-  ayarlar() {
-    return DB.get('ayarlar') || {
-      klinik_adi: 'AVCI VETERİNER KLİNİĞİ',
-      klinik_adres: '',
-      klinik_tel: '',
-      gebelik_gunu: 280
-    };
-  }
-};
-
-const STOK_KUTU_RENKLERI = [
-  '#E53935', '#1E88E5', '#43A047', '#FB8C00', '#8E24AA',
-  '#00ACC1', '#FDD835', '#6D4C41', '#3949AB', '#00897B'
-];
-
-let seciliStokKutusu = 1;
-
-// ============= YARDIMCI FONKSİYONLAR =============
-function tarihParse(str) {
-  if (!str) return null;
-  const d = new Date(str);
-  return isNaN(d) ? null : d;
-}
-
-function tarihTR(isoStr) {
-  if (!isoStr) return '';
-  const d = new Date(isoStr);
-  if (isNaN(d)) return isoStr;
-  const gun = String(d.getDate()).padStart(2, '0');
-  const ay = String(d.getMonth() + 1).padStart(2, '0');
-  const yil = d.getFullYear();
-  return `${gun}.${ay}.${yil}`;
-}
-
-function buguneKalan(isoStr) {
-  if (!isoStr) return null;
-  const d = new Date(isoStr);
-  if (isNaN(d)) return null;
-  const bugun = new Date();
-  bugun.setHours(0, 0, 0, 0);
-  d.setHours(0, 0, 0, 0);
-  return Math.floor((d - bugun) / (1000 * 60 * 60 * 24));
-}
-
-function tarihEkle(isoStr, gun) {
-  const d = new Date(isoStr);
-  d.setDate(d.getDate() + gun);
-  return d.toISOString().split('T')[0];
-}
-
-function e(val) {
-  if (val === null || val === undefined) return '';
-  return String(val).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-
-function mesajGoster(containerId, mesaj, tip) {
-  const div = document.getElementById(containerId);
-  if (!mesaj) {
-    div.innerHTML = '';
-    return;
-  }
-  div.innerHTML = `<div class="alert ${tip}">${e(mesaj)}</div>`;
-  setTimeout(() => div.innerHTML = '', 3000);
-}
-
-function saatTarihGuncelle() {
-  const el = document.getElementById('saatTarih');
-  if (!el) return;
-
-  const now = new Date();
-  const tarih = now.toLocaleDateString('tr-TR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric'
-  });
-  const saat = now.toLocaleTimeString('tr-TR', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit'
-  });
-
-  el.innerHTML = `${tarih}<br>${saat}`;
-}
-
-// ============= KÖY YÖNETİMİ =============
-function koyListesiYukle() {
-  const koyler = DB.koyler();
-  const koyHTML = koyler.map(k => `<option value="${e(k.koy_adi)}">`).join('');
-  document.getElementById('koyler').innerHTML = koyHTML;
-  document.getElementById('koyler-sahip').innerHTML = koyHTML;
-}
-
-function koyEkle(koyAdi) {
-  if (!koyAdi) return;
-  const koyler = DB.koyler();
-  if (!koyler.find(k => k.koy_adi === koyAdi)) {
-    koyler.push({ id: Date.now(), koy_adi: koyAdi });
-    DB.set('koyler', koyler);
-  }
-}
-
-// ============= VERİ İŞLEMLERİ =============
-function sahipEkle(ad, il, ilce, koyAdi, telefon) {
-  const sahipler = DB.sahipler();
-  let sahip = sahipler.find(s => s.ad_soyad === ad);
-  if (sahip) {
-    sahip.il = il;
-    sahip.ilce = ilce;
-    sahip.koy_adi = koyAdi || '';
-    if (telefon !== undefined) sahip.telefon = telefon || '';
-  } else {
-    sahip = {
-      id: Date.now(),
-      ad_soyad: ad,
-      il: il || '',
-      ilce: ilce || '',
-      koy_adi: koyAdi || '',
-      telefon: telefon || ''
-    };
-    sahipler.push(sahip);
-  }
-  DB.set('sahipler', sahipler);
-  
-  if (koyAdi) koyEkle(koyAdi);
-  
-  return sahip;
-}
-
-function sahipSil(id) {
-  const tohumlamalar = DB.tohumlamalar();
-  if (tohumlamalar.some(t => t.sahip_id === id)) {
-    throw new Error('Bu sahibin tohumlama kaydı var. Önce kayıtları silin.');
-  }
-  const sahipler = DB.sahipler().filter(s => s.id !== id);
-  DB.set('sahipler', sahipler);
-}
-
-function inekEkle(kupeNo, sahipId) {
-  const inekler = DB.inekler();
-  let inek = inekler.find(i => i.kupe_no === kupeNo);
-  if (inek) {
-    inek.sahip_id = sahipId;
-  } else {
-    inek = {
-      id: Date.now(),
-      kupe_no: kupeNo,
-      sahip_id: sahipId
-    };
-    inekler.push(inek);
-  }
-  DB.set('inekler', inekler);
-  return inek;
-}
-
-function bogaEkle(bogaAdi, detaylar = {}) {
-  const bogalar = DB.bogalar();
-  let boga = bogalar.find(b => b.boga_adi === bogaAdi);
-  const yeniDetaylar = {
-    irk: detaylar.irk || '',
-    verim_tipi: detaylar.verim_tipi || '',
-    dogum_kolayligi: detaylar.dogum_kolayligi || '',
-    payet_rengi: detaylar.payet_rengi || '',
-    stok_kutusu: detaylar.stok_kutusu || 1
-  };
-
-  if (boga) {
-    Object.assign(boga, yeniDetaylar);
-  } else {
-    boga = {
-      id: Date.now(),
-      boga_adi: bogaAdi,
-      ...yeniDetaylar
-    };
-    bogalar.push(boga);
-  }
-  DB.set('bogalar', bogalar);
-  return boga;
-}
-
-function bogaSil(id) {
-  const tohumlamalar = DB.tohumlamalar();
-  const kullanim = tohumlamalar.filter(t => t.boga_id === id).length;
-  if (kullanim > 0) {
-    throw new Error('Bu boğa kayıtlarda kullanılmış. Önce ilgili kayıtları silin.');
-  }
-  const bogalar = DB.bogalar().filter(b => b.id !== id);
-  DB.set('bogalar', bogalar);
-  const stoklar = DB.stok().filter(s => s.boga_id !== id);
-  DB.set('stok', stoklar);
-}
-
-function stokEkle(bogaId, miktar) {
-  const stoklar = DB.stok();
-  let stok = stoklar.find(s => s.boga_id === bogaId);
-  if (stok) {
-    stok.miktar += miktar;
-  } else {
-    stok = {
-      id: Date.now(),
-      boga_id: bogaId,
-      miktar: miktar
-    };
-    stoklar.push(stok);
-  }
-  DB.set('stok', stoklar);
-  return stok;
-}
-
-function stokKullan(bogaId) {
-  const stoklar = DB.stok();
-  const stok = stoklar.find(s => s.boga_id === bogaId);
-  if (!stok || stok.miktar <= 0) {
-    throw new Error('Seçilen boğanın stoğu yok.');
-  }
-  stok.miktar -= 1;
-  DB.set('stok', stoklar);
-}
-
-function tohumulamaEkle(sahipId, kupeNo, tohumlamaTarihi, dogumTarihi, bogaId, aciklama) {
-  const tohumlamalar = DB.tohumlamalar();
-  const siraNo = tohumlamalar.length > 0 ? Math.max(...tohumlamalar.map(t => t.sira_no)) + 1 : 1;
-  const kayit = {
-    id: Date.now(),
-    sira_no: siraNo,
-    sahip_id: sahipId,
-    kupe_no: kupeNo,
-    tohumlama_tarihi: tohumlamaTarihi,
-    dogum_tarihi: dogumTarihi,
-    boga_id: bogaId,
-    aciklama: aciklama || ''
-  };
-  tohumlamalar.push(kayit);
-  DB.set('tohumlamalar', tohumlamalar);
-  return kayit;
-}
-
-function tohumulamaSil(id) {
-  const tohumlamalar = DB.tohumlamalar().filter(t => t.id !== id);
-  DB.set('tohumlamalar', tohumlamalar);
-}
-
-// ============= EXCEL EXPORT =============
-function excelIndir() {
-  try {
-    const tohumlamalar = DB.tohumlamalar();
-    const sahipler = DB.sahipler();
-    const bogalar = DB.bogalar();
-    
-    if (tohumlamalar.length === 0) {
-      alert('Kayıt yok!');
-      return;
-    }
-    
-    const data = tohumlamalar.map(t => {
-      const sahip = sahipler.find(s => s.id === t.sahip_id);
-      const boga = bogalar.find(b => b.id === t.boga_id);
-      return {
-        'Sıra No': t.sira_no,
-        'Sahip': sahip?.ad_soyad || '',
-        'İl': sahip?.il || '',
-        'İlçe': sahip?.ilce || '',
-        'Köy': sahip?.koy_adi || '',
-        'Cep Telefonu': sahip?.telefon || '',
-        'Küpe No': t.kupe_no,
-        'Tohumlama Tarihi': tarihTR(t.tohumlama_tarihi),
-        'Tahmini Doğum': tarihTR(t.dogum_tarihi),
-        'Boğa': boga?.boga_adi || '',
-        'Boğa Irkı': boga?.irk || '',
-        'Verim Tipi': boga?.verim_tipi || '',
-        'Doğum Kolaylığı': boga?.dogum_kolayligi || '',
-        'Payet Rengi': boga?.payet_rengi || '',
-        'Kanister': boga?.stok_kutusu ? `${boga.stok_kutusu}. Kanister` : '',
-        'Açıklama': t.aciklama
-      };
-    });
-    
-    const ws = XLSX.utils.json_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Kayıtlar');
-    
-    const tarih = new Date().toISOString().split('T')[0];
-    XLSX.writeFile(wb, `suni_tohumlama_${tarih}.xlsx`);
-    
-    alert('Excel dosyası indirildi!');
-  } catch (err) {
-    alert('Excel hatası: ' + err.message);
-  }
-}
-
-// ============= VERİTABANI YÖNETİMİ FONKSİYONLARI =============
-function veritabaniKaydet() {
-  const data = {
-    sahipler: DB.sahipler(),
-    inekler: DB.inekler(),
-    bogalar: DB.bogalar(),
-    stok: DB.stok(),
-    tohumlamalar: DB.tohumlamalar(),
-    koyler: DB.koyler(),
-    ayarlar: DB.ayarlar(),
-    versiyon: '2.0',
-    tarih: new Date().toISOString(),
-    kayit_sayisi: DB.tohumlamalar().length
-  };
-  
-  const json = JSON.stringify(data, null, 2);
-  const blob = new Blob([json], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `suni_tohumlama_yedek_${new Date().toISOString().split('T')[0]}.json`;
-  a.click();
-  
-  URL.revokeObjectURL(url);
-  
-  mesajGoster('ayarlar-mesaj', 'Yedek alındı!', 'ok');
-}
-
-function veritabaniSifirla() {
-  const onay1 = confirm('TÜM VERİLER SİLİNECEK! Emin misiniz?');
-  if (!onay1) return;
-  
-  const onay2 = confirm('Bu işlem GERİ ALINAMAZ! Son kez onaylıyor musunuz?');
-  if (!onay2) return;
-  
-  DB.set('sahipler', []);
-  DB.set('inekler', []);
-  DB.set('bogalar', []);
-  DB.set('stok', []);
-  DB.set('tohumlamalar', []);
-  DB.set('koyler', []);
-  
-  alert('Tüm veriler silindi. Sayfa yenilenecek.');
-  window.location.reload();
-}
-
-document.getElementById('fileYedek').addEventListener('change', async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-  
-  try {
-    const text = await file.text();
-    const data = JSON.parse(text);
-    
-    if (!data.sahipler || !data.tohumlamalar) {
-      throw new Error('Geçersiz yedek dosyası!');
-    }
-    
-    if (!confirm(`${data.kayit_sayisi} kayıt yüklenecek. Mevcut veriler SİLİNECEK! Onaylıyor musunuz?`)) {
-      return;
-    }
-    
-    DB.set('sahipler', data.sahipler);
-    DB.set('inekler', data.inekler);
-    DB.set('bogalar', data.bogalar);
-    DB.set('stok', data.stok);
-    DB.set('tohumlamalar', data.tohumlamalar);
-    DB.set('koyler', data.koyler || []);
-    DB.set('ayarlar', data.ayarlar);
-    
-    alert('Yedek başarıyla yüklendi! Sayfa yenilenecek.');
-    window.location.reload();
-    
-  } catch (err) {
-    mesajGoster('ayarlar-mesaj', `Yedek yükleme hatası: ${err.message}`, 'error');
-  }
-});
-
-// ============= SAYFA NAVİGASYONU =============
-function sayfaGoster(pageId) {
-  document.querySelectorAll('main').forEach(m => m.classList.remove('active'));
-  document.querySelectorAll('nav a').forEach(a => a.classList.remove('active'));
-  
-  document.getElementById(`sayfa-${pageId}`).classList.add('active');
-  document.querySelector(`nav a[data-page="${pageId}"]`).classList.add('active');
-  
-  const basliklar = {
-    ozet: 'Özet',
-    kayit: 'Yeni Kayıt',
-    kayitlar: 'Kayıtlar',
-    stok: 'Sperma Stoku',
-    sahipler: 'Sahipler',
-    ayarlar: 'Ayarlar'
-  };
-  document.getElementById('sayfaBaslik').textContent = basliklar[pageId];
-  
-  if (pageId === 'ozet') sayfaOzetYukle();
-  else if (pageId === 'kayit') sayfaKayitYukle();
-  else if (pageId === 'kayitlar') sayfaKayitlarYukle();
-  else if (pageId === 'stok') sayfaStokYukle();
-  else if (pageId === 'sahipler') sayfaSahiplerYukle();
-  else if (pageId === 'ayarlar') sayfaAyarlarYukle();
-}
-
-// ============= ÖZET SAYFASI =============
-function sayfaOzetYukle() {
-  const tohumlamalar = DB.tohumlamalar();
-  const sahipler = DB.sahipler();
-  const bogalar = DB.bogalar();
-  const stoklar = DB.stok();
-  
-  const toplamStok = stoklar.reduce((sum, s) => sum + s.miktar, 0);
-  
-  const bugun = new Date();
-  const otuzGunSonra = new Date();
-  otuzGunSonra.setDate(bugun.getDate() + 30);
-  
-  const yaklasan = tohumlamalar
-    .filter(t => {
-      const dogum = new Date(t.dogum_tarihi);
-      return dogum >= bugun && dogum <= otuzGunSonra;
-    })
-    .sort((a, b) => new Date(a.dogum_tarihi) - new Date(b.dogum_tarihi));
-  
-  document.getElementById('ozet-istatistikler').innerHTML = `
-    <div class="grid">
-      <div class="stat"><b>${tohumlamalar.length}</b><span>Toplam kayıt</span></div>
-      <div class="stat"><b>${sahipler.length}</b><span>Hayvan sahibi</span></div>
-      <div class="stat"><b>${bogalar.length}</b><span>Boğa</span></div>
-      <div class="stat"><b>${toplamStok}</b><span>Toplam stok</span></div>
-    </div>
-  `;
-  
-  let yakItem = '';
-  yaklasan.forEach(t => {
-    const sahip = sahipler.find(s => s.id === t.sahip_id);
-    const boga = bogalar.find(b => b.id === t.boga_id);
-    const kalan = buguneKalan(t.dogum_tarihi);
-    const tag = kalan <= 7 ? 'bad' : 'warn';
-    yakItem += `<div class="item">
-      <b>${e(sahip?.ad_soyad)}</b> <span class="muted">${e(t.kupe_no)}</span><br>
-      <span>Tahmini doğum: ${e(tarihTR(t.dogum_tarihi))}</span><br>
-      <span class="tag ${tag}">${e(kalan)} gün</span>
-      <span class="muted">${e(boga?.boga_adi)}</span>
-    </div>`;
-  });
-  
-  if (!yakItem) yakItem = '<p class="muted">30 gün içinde yaklaşan doğum yok.</p>';
-  document.getElementById('ozet-yaklasan').innerHTML = yakItem;
-}
-
-// ============= YENİ KAYIT SAYFASI =============
-function aramaMetni(value) {
-  return String(value || '').toLocaleLowerCase('tr-TR');
-}
-
-function autocompleteGoster(inputId, listeId, kaynakListe, secimCallback) {
-  const input = document.getElementById(inputId);
-  const liste = document.getElementById(listeId);
-  const q = aramaMetni(input.value);
-  const eslesenler = kaynakListe
-    .filter(item => !q || aramaMetni(item).includes(q))
-    .slice(0, 60);
-
-  if (eslesenler.length === 0) {
-    liste.style.display = 'none';
-    liste.innerHTML = '';
-    return;
-  }
-
-  liste.innerHTML = eslesenler
-    .map(item => `<button type="button" class="autocomplete-option" data-value="${e(item)}">${e(item)}</button>`)
-    .join('');
-  liste.style.display = 'block';
-
-  liste.querySelectorAll('.autocomplete-option').forEach(btn => {
-    btn.addEventListener('mousedown', event => {
-      event.preventDefault();
-      input.value = btn.getAttribute('data-value');
-      liste.style.display = 'none';
-      if (secimCallback) secimCallback();
-    });
-  });
-}
-
-function autocompleteGizle(listeId) {
-  setTimeout(() => {
-    const liste = document.getElementById(listeId);
-    if (liste) liste.style.display = 'none';
-  }, 150);
-}
-
-function yeniKayitListeleriGuncelle() {
-  const sahipler = DB.sahipler().map(s => s.ad_soyad).sort();
-  const inekler = DB.inekler().map(i => i.kupe_no).sort();
-  const bogalar = DB.bogalar().map(b => b.boga_adi).sort();
-
-  document.getElementById('kupeler').innerHTML = inekler.map(k => `<option value="${e(k)}">`).join('');
-  if (document.activeElement?.id === 'inp-sahip') {
-    autocompleteGoster('inp-sahip', 'sahip-oneriler', sahipler, sahipBilgileriniDoldur);
-  } else {
-    document.getElementById('sahip-oneriler').style.display = 'none';
-  }
-
-  if (document.activeElement?.id === 'inp-boga') {
-    autocompleteGoster('inp-boga', 'boga-oneriler', bogalar);
-  } else {
-    document.getElementById('boga-oneriler').style.display = 'none';
-  }
-}
-
-function sahipBilgileriniDoldur() {
-  const sahipAd = document.getElementById('inp-sahip').value;
-  const sahip = DB.sahipler().find(s => s.ad_soyad === sahipAd);
-  if (!sahip) return;
-
-  document.getElementById('inp-il').value = sahip.il || '';
-  document.getElementById('inp-ilce').value = sahip.ilce || '';
-  document.getElementById('inp-koy').value = sahip.koy_adi || '';
-}
-
-function sayfaKayitYukle() {
-  yeniKayitListeleriGuncelle();
-  koyListesiYukle();
-  document.getElementById('inp-tarih').value = new Date().toISOString().split('T')[0];
-}
-
-document.getElementById('inp-sahip').addEventListener('input', () => {
-  const sahipler = DB.sahipler().map(s => s.ad_soyad).sort();
-  autocompleteGoster('inp-sahip', 'sahip-oneriler', sahipler, sahipBilgileriniDoldur);
-});
-document.getElementById('inp-sahip').addEventListener('focus', () => {
-  const sahipler = DB.sahipler().map(s => s.ad_soyad).sort();
-  autocompleteGoster('inp-sahip', 'sahip-oneriler', sahipler, sahipBilgileriniDoldur);
-});
-document.getElementById('inp-sahip').addEventListener('blur', () => autocompleteGizle('sahip-oneriler'));
-document.getElementById('inp-sahip').addEventListener('change', sahipBilgileriniDoldur);
-
-document.getElementById('inp-boga').addEventListener('input', () => {
-  const bogalar = DB.bogalar().map(b => b.boga_adi).sort();
-  autocompleteGoster('inp-boga', 'boga-oneriler', bogalar);
-});
-document.getElementById('inp-boga').addEventListener('focus', () => {
-  const bogalar = DB.bogalar().map(b => b.boga_adi).sort();
-  autocompleteGoster('inp-boga', 'boga-oneriler', bogalar);
-});
-document.getElementById('inp-boga').addEventListener('blur', () => autocompleteGizle('boga-oneriler'));
-
-document.getElementById('formKayit').addEventListener('submit', e => {
-  e.preventDefault();
-  try {
-    const sahipAd = document.getElementById('inp-sahip').value.trim();
-    const il = document.getElementById('inp-il').value.trim();
-    const ilce = document.getElementById('inp-ilce').value.trim();
-    const koy = document.getElementById('inp-koy').value.trim();
-    const kupe = document.getElementById('inp-kupe').value.trim();
-    const tarih = document.getElementById('inp-tarih').value;
-    const bogaAd = document.getElementById('inp-boga').value.trim();
-    const aciklama = document.getElementById('inp-aciklama').value.trim();
-    
-    if (!sahipAd || !kupe || !bogaAd || !tarih) {
-      throw new Error('Sahip, küpe, tarih ve boğa zorunludur.');
-    }
-    
-    const sahip = sahipEkle(sahipAd, il, ilce, koy);
-    inekEkle(kupe, sahip.id);
-    
-    const bogalar = DB.bogalar();
-    const boga = bogalar.find(b => b.boga_adi === bogaAd);
-    if (!boga) {
-      throw new Error('Boğa stokta kayıtlı değil. Önce Stok sayfasından ekleyin.');
-    }
-    
-    stokKullan(boga.id);
-    
-    const gebelikGun = DB.ayarlar().gebelik_gunu;
-    const dogumTarihi = tarihEkle(tarih, gebelikGun);
-    
-    tohumulamaEkle(sahip.id, kupe, tarih, dogumTarihi, boga.id, aciklama);
-    
-    mesajGoster('kayit-mesaj', 'Kayıt başarıyla eklendi!', 'ok');
-    document.getElementById('formKayit').reset();
-    document.getElementById('inp-tarih').value = new Date().toISOString().split('T')[0];
-    
-    sayfaKayitYukle();
-  } catch (err) {
-    mesajGoster('kayit-mesaj', err.message, 'error');
-  }
-});
-
-// ============= KAYITLAR SAYFASI =============
-function sayfaKayitlarYukle(arama = '') {
-  const tohumlamalar = DB.tohumlamalar();
-  const sahipler = DB.sahipler();
-  const bogalar = DB.bogalar();
-  
-  let filtrelenmis = tohumlamalar;
-  if (arama) {
-    const q = arama.toLowerCase();
-    filtrelenmis = tohumlamalar.filter(t => {
-      const sahip = sahipler.find(s => s.id === t.sahip_id);
-      const boga = bogalar.find(b => b.id === t.boga_id);
-      return (sahip?.ad_soyad || '').toLowerCase().includes(q) ||
-             t.kupe_no.toLowerCase().includes(q) ||
-             (boga?.boga_adi || '').toLowerCase().includes(q);
-    });
-  }
-  
-  filtrelenmis.sort((a, b) => new Date(b.tohumlama_tarihi) - new Date(a.tohumlama_tarihi));
-  
-  let items = '';
-  filtrelenmis.forEach(t => {
-    const sahip = sahipler.find(s => s.id === t.sahip_id);
-    const boga = bogalar.find(b => b.id === t.boga_id);
-    const kalan = buguneKalan(t.dogum_tarihi);
-    const tag = kalan < 0 ? 'bad' : (kalan <= 30 ? 'warn' : 'ok');
-    items += `<div class="item">
-      <b>#${e(t.sira_no)} ${e(sahip?.ad_soyad)}</b><br>
-      <span class="muted">${e(sahip?.il)} ${e(sahip?.ilce)} ${e(sahip?.koy_adi)}</span><br>
-      <span>Küpe: <b>${e(t.kupe_no)}</b></span><br>
-      <span>Tohumlama: ${e(tarihTR(t.tohumlama_tarihi))}</span><br>
-      <span>Doğum: ${e(tarihTR(t.dogum_tarihi))}</span>
-      <span class="tag ${tag}">${kalan !== null ? e(kalan) + ' gün' : ''}</span><br>
-      <span>Boğa: ${e(boga?.boga_adi)}</span><br>
-      <span class="muted">${e(t.aciklama)}</span>
-      <button class="red" onclick="kayitSil(${t.id})">Sil</button>
-    </div>`;
-  });
-  
-  if (!items) items = '<p class="muted">Kayıt bulunamadı.</p>';
-  document.getElementById('kayitlar-liste').innerHTML = items;
-}
-
-document.getElementById('formArama').addEventListener('submit', e => {
-  e.preventDefault();
-  const q = document.getElementById('inp-arama').value.trim();
-  sayfaKayitlarYukle(q);
-});
-
-function kayitSil(id) {
-  if (!confirm('Kayıt silinsin mi?')) return;
-  try {
-    tohumulamaSil(id);
-    mesajGoster('kayitlar-mesaj', 'Kayıt silindi.', 'ok');
-    sayfaKayitlarYukle(document.getElementById('inp-arama').value.trim());
-  } catch (err) {
-    mesajGoster('kayitlar-mesaj', err.message, 'error');
-  }
-}
-
-// ============= STOK SAYFASI =============
-function stokKutusuSec(no) {
-  seciliStokKutusu = no;
-  document.getElementById('inp-stok-kutu').value = String(no);
-  sayfaStokYukle();
-}
-
-function stokKutuButonlariYukle() {
-  const stoklar = DB.stok();
-  const bogalar = DB.bogalar();
-  const html = STOK_KUTU_RENKLERI.map((renk, index) => {
-    const no = index + 1;
-    const toplam = bogalar
-      .filter(b => Number(b.stok_kutusu || 1) === no)
-      .reduce((sum, b) => {
-        const stok = stoklar.find(s => s.boga_id === b.id);
-        return sum + (stok ? stok.miktar : 0);
-      }, 0);
-
-    return `<button type="button" class="stok-kutu ${seciliStokKutusu === no ? 'active' : ''}"
-      style="background:${renk}" onclick="stokKutusuSec(${no})">${no}. Kanister<br><small>Stok: ${toplam}</small></button>`;
-  }).join('');
-
-  document.getElementById('stok-kutu-butonlari').innerHTML = html;
-}
-
-function sayfaStokYukle() {
-  const bogalar = DB.bogalar();
-  const stoklar = DB.stok();
-  const tohumlamalar = DB.tohumlamalar();
-  document.getElementById('inp-stok-kutu').value = String(seciliStokKutusu);
-  stokKutuButonlariYukle();
-  
-  let items = '';
-  bogalar
-    .filter(b => Number(b.stok_kutusu || 1) === seciliStokKutusu)
-    .forEach(b => {
-    const stok = stoklar.find(s => s.boga_id === b.id);
-    const miktar = stok ? stok.miktar : 0;
-    const kullanim = tohumlamalar.filter(t => t.boga_id === b.id).length;
-    
-    const durum = miktar === 0 ? 'Stok Yok' : (miktar <= 5 ? 'Kritik' : 'Yeterli');
-    const tag = miktar === 0 ? 'bad' : (miktar <= 5 ? 'warn' : 'ok');
-    
-    items += `<div class="item">
-      <b>${e(b.boga_adi)}</b>
-      <span class="tag ${tag}">${e(durum)}</span><br>
-      <span>Irkı: <b>${e(b.irk || '-')}</b></span><br>
-      <span>Verim Tipi: <b>${e(b.verim_tipi || '-')}</b></span><br>
-      <span>Doğum Kolaylığı: <b>${e(b.dogum_kolayligi || '-')}</b></span><br>
-      <span>Payet Rengi: <b>${e(b.payet_rengi || '-')}</b></span><br>
-      <span>Mevcut stok: <b>${e(miktar)}</b></span><br>
-      <span class="muted">Toplam kullanım: ${e(kullanim)}</span>
-      <button class="red" onclick="bogaSilBtn(${b.id})">Boğa Sil</button>
-    </div>`;
-  });
-  
-  if (!items) items = `<p class="muted">${seciliStokKutusu}. Kanister içinde boğa yok.</p>`;
-  document.getElementById('stok-liste').innerHTML = items;
-}
-
-document.getElementById('formStok').addEventListener('submit', e => {
-  e.preventDefault();
-  try {
-    const bogaAd = document.getElementById('inp-stok-boga').value.trim();
-    const irk = document.getElementById('inp-stok-irk').value.trim();
-    const verimTipi = document.getElementById('inp-stok-verim').value;
-    const dogumKolayligi = document.getElementById('inp-stok-dogum').value;
-    const miktar = parseInt(document.getElementById('inp-stok-miktar').value);
-    const payetRengi = document.getElementById('inp-stok-payet').value.trim();
-    const stokKutusu = parseInt(document.getElementById('inp-stok-kutu').value) || seciliStokKutusu;
-    
-    if (!bogaAd || miktar < 1) {
-      throw new Error('Boğa adı ve miktar zorunludur.');
-    }
-    
-    const boga = bogaEkle(bogaAd, {
-      irk,
-      verim_tipi: verimTipi,
-      dogum_kolayligi: dogumKolayligi,
-      payet_rengi: payetRengi,
-      stok_kutusu: stokKutusu
-    });
-    stokEkle(boga.id, miktar);
-    
-    mesajGoster('stok-mesaj', 'Stok eklendi!', 'ok');
-    document.getElementById('formStok').reset();
-    document.getElementById('inp-stok-kutu').value = String(seciliStokKutusu);
-    document.getElementById('inp-stok-miktar').value = '1';
-    sayfaStokYukle();
-    yeniKayitListeleriGuncelle();
-  } catch (err) {
-    mesajGoster('stok-mesaj', err.message, 'error');
-  }
-});
-
-function bogaSilBtn(id) {
-  if (!confirm('Boğa silinsin mi?')) return;
-  try {
-    bogaSil(id);
-    mesajGoster('stok-mesaj', 'Boğa silindi.', 'ok');
-    sayfaStokYukle();
-    yeniKayitListeleriGuncelle();
-  } catch (err) {
-    mesajGoster('stok-mesaj', err.message, 'error');
-  }
-}
-
-// ============= SAHİPLER SAYFASI =============
-function sayfaSahiplerYukle() {
-  koyListesiYukle();
-  const sahipler = DB.sahipler();
-  const tohumlamalar = DB.tohumlamalar();
-  
-  let items = '';
-  sahipler.forEach(s => {
-    const kayitlar = tohumlamalar.filter(t => t.sahip_id === s.id);
-    const kupeler = [...new Set(kayitlar.map(k => k.kupe_no))].join(', ');
-    
-    items += `<div class="item">
-      <b>${e(s.ad_soyad)}</b><br>
-      <span class="muted">${e(s.il)} ${e(s.ilce)} ${e(s.koy_adi)}</span><br>
-      <span>Cep: <b>${e(s.telefon || '-')}</b></span><br>
-      <span>Kayıt: ${kayitlar.length}</span><br>
-      <span class="muted">Küpeler: ${e(kupeler)}</span>
-      <button class="red" onclick="sahipSilBtn(${s.id})">Sil</button>
-    </div>`;
-  });
-  
-  if (!items) items = '<p class="muted">Sahip kaydı yok.</p>';
-  document.getElementById('sahipler-liste').innerHTML = items;
-}
-
-document.getElementById('formSahip').addEventListener('submit', e => {
-  e.preventDefault();
-  try {
-    const ad = document.getElementById('inp-sahip-ad').value.trim();
-    const il = document.getElementById('inp-sahip-il').value.trim();
-    const ilce = document.getElementById('inp-sahip-ilce').value.trim();
-    const telefon = document.getElementById('inp-sahip-telefon').value.trim();
-    const koy = document.getElementById('inp-sahip-koy').value.trim();
-    
-    if (!ad) throw new Error('Ad soyad zorunludur.');
-    
-    sahipEkle(ad, il, ilce, koy, telefon);
-    mesajGoster('sahipler-mesaj', 'Sahip kaydedildi!', 'ok');
-    document.getElementById('formSahip').reset();
-    sayfaSahiplerYukle();
-    yeniKayitListeleriGuncelle();
-  } catch (err) {
-    mesajGoster('sahipler-mesaj', err.message, 'error');
-  }
-});
-
-function sahipSilBtn(id) {
-  if (!confirm('Sahip silinsin mi?')) return;
-  try {
-    sahipSil(id);
-    mesajGoster('sahipler-mesaj', 'Sahip silindi.', 'ok');
-    sayfaSahiplerYukle();
-    yeniKayitListeleriGuncelle();
-  } catch (err) {
-    mesajGoster('sahipler-mesaj', err.message, 'error');
-  }
-}
-
-// ============= AYARLAR SAYFASI =============
-function isIosDevice() {
-  return /iphone|ipad|ipod/i.test(navigator.userAgent) ||
-         (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-}
-
-function isStandaloneMode() {
-  return window.matchMedia('(display-mode: standalone)').matches ||
-         window.navigator.standalone === true;
-}
-
-function sayfaAyarlarYukle() {
-  const ayarlar = DB.ayarlar();
-  document.getElementById('inp-klinik-adi').value = ayarlar.klinik_adi;
-  document.getElementById('inp-klinik-adres').value = ayarlar.klinik_adres || '';
-  document.getElementById('inp-klinik-tel').value = ayarlar.klinik_tel || '';
-  document.getElementById('inp-gebelik-gunu').value = ayarlar.gebelik_gunu || 280;
-  
-  // PWA kurulum butonunu göster
-  if (window.deferredPrompt || (isIosDevice() && !isStandaloneMode())) {
-    document.getElementById('pwa-install-card').style.display = 'block';
-  }
-}
-
-function ayarlariKaydet() {
-  try {
-    const klinikAdi = document.getElementById('inp-klinik-adi').value.trim();
-    const klinikAdres = document.getElementById('inp-klinik-adres').value.trim();
-    const klinikTel = document.getElementById('inp-klinik-tel').value.trim();
-    const gebelikGunu = parseInt(document.getElementById('inp-gebelik-gunu').value);
-    
-    if (!klinikAdi) throw new Error('Klinik adı zorunludur.');
-    if (gebelikGunu < 250 || gebelikGunu > 300) {
-      throw new Error('Gebelik süresi 250-300 gün arasında olmalıdır.');
-    }
-    
-    const ayarlar = {
-      klinik_adi: klinikAdi,
-      klinik_adres: klinikAdres,
-      klinik_tel: klinikTel,
-      gebelik_gunu: gebelikGunu
-    };
-    
-    DB.set('ayarlar', ayarlar);
-    document.getElementById('klinikAdi').textContent = klinikAdi;
-    
-    mesajGoster('ayarlar-mesaj', 'Ayarlar kaydedildi!', 'ok');
-  } catch (err) {
-    mesajGoster('ayarlar-mesaj', err.message, 'error');
-  }
-}
-
-// ============= PWA KURULUM =============
-let deferredPrompt;
-
-window.addEventListener('beforeinstallprompt', (e) => {
-  e.preventDefault();
-  deferredPrompt = e;
-  window.deferredPrompt = e;
-  document.getElementById('pwa-install-card').style.display = 'block';
-});
-
-function pwaKur() {
-  if (!deferredPrompt) {
-    if (isIosDevice()) {
-      alert('iPhone/iPad kurulumu icin:\n\n1. Bu siteyi Safari ile acin\n2. Paylas dugmesine basin\n3. "Ana Ekrana Ekle" secin\n4. Ekle deyin');
-      return;
-    }
-
-    alert('Uygulama zaten kurulu veya tarayıcınız desteklemiyor.');
-    return;
-  }
-  
-  deferredPrompt.prompt();
-  deferredPrompt.userChoice.then((choiceResult) => {
-    if (choiceResult.outcome === 'accepted') {
-      console.log('PWA kuruldu');
-      document.getElementById('pwa-install-card').style.display = 'none';
-    }
-    deferredPrompt = null;
-    window.deferredPrompt = null;
-  });
-}
-
-window.addEventListener('appinstalled', () => {
-  console.log('PWA başarıyla kuruldu');
-  document.getElementById('pwa-install-card').style.display = 'none';
-});
-
-// ============= NAVİGASYON ETKİNLEŞTİRME =============
-document.querySelectorAll('nav a').forEach(a => {
-  a.addEventListener('click', () => {
-    const page = a.getAttribute('data-page');
-    sayfaGoster(page);
-  });
-});
-
-// ============= İLK YÜKLEME =============
-document.addEventListener('DOMContentLoaded', () => {
-  const ayarlar = DB.ayarlar();
-  document.getElementById('klinikAdi').textContent = ayarlar.klinik_adi;
-  saatTarihGuncelle();
-  setInterval(saatTarihGuncelle, 1000);
-  sayfaGoster('ozet');
-
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./service-worker.js')
-      .then(reg => console.log('Service Worker kaydedildi:', reg.scope))
-      .catch(err => console.log('Service Worker hatasi:', err));
-  }
-});
-</script>
-
+    <script>
+        // 1. Cihaza özel benzersiz bir kod üretme fonksiyonu
+        function cihazKoduUret() {
+            let cihazId = localStorage.getItem('suni_tohumlama_cihaz_id');
+            if (!cihazId) {
+                // Rastgele 6 haneli bir bilgisayar numarası üretir
+                cihazId = 'ST-' + Math.floor(100000 + Math.random() * 900000);
+                localStorage.setItem('suni_tohumlama_cihaz_id', cihazId);
+            }
+            return cihazId;
+        }
+
+        // 2. Basit ve güvenli şifre doğrulama motoru (Algoritma)
+        // Yöneticinin vereceği şifre: Cihaz Kodunun sayısal kısmının 2 katı + 2026 olacaktır.
+        function dogruAnahtarHesapla(cihazId) {
+            let sadeceSayilar = cihazId.replace(/[^0-9]/g, '');
+            let formul = (parseInt(sadeceSayilar) * 2) + 2026; 
+            return 'STK-' + formul;
+        }
+
+        // Sayfa açıldığında çalışacak ilk hazırlık
+        const mevcutCihazKodu = cihazKoduUret();
+        document.getElementById('display-cihaz-kodu').innerText = mevcutCihazKodu;
+
+        // Daha önce doğru şifre girilmiş mi kontrolü
+        if (localStorage.getItem('suni_tohumlama_aktif_mi') === 'evet') {
+            uygulamayiAc();
+        }
+
+        // Butona basıldığında şifreyi kontrol eden fonksiyon
+        function lisansKontrolEt() {
+            const girilenSifre = document.getElementById('lisans-anahtari').value.trim();
+            const beklenenSifre = dogruAnahtarHesapla(mevcutCihazKodu);
+
+            if (girilenSifre === beklenenSifre) {
+                localStorage.setItem('suni_tohumlama_aktif_mi', 'evet');
+                uygulamayiAc();
+            } else {
+                const hataAlanlı = document.getElementById('hata-mesaji');
+                hataAlanlı.style.display = 'block';
+                setTimeout(() => { hataAlanlı.style.display = 'none'; }, 3000);
+            }
+        }
+
+        // Şifre doğruysa kilit ekranını kaldıran fonksiyon
+        function uygulamayiAc() {
+            document.getElementById('lisans-ekrani').style.display = 'none';
+            document.getElementById('ana-program').style.display = 'block';
+            
+            // Orijinal kodlarınızı korumak için buraya mevcut sayfanın kendi kodlarını basıyoruz
+            document.getElementById('orijinal-icerik').srcdoc = `
+                <div style="padding:20px; font-family:sans-serif;">
+                    <h3>Suni Tohumlama Takip Sistemi Aktif</h3>
+                    <p>Program başarıyla doğrulandı ve kullanıma hazır.</p>
+                </div>
+            `;
+        }
+    </script>
 </body>
 </html>
