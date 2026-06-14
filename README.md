@@ -5,7 +5,8 @@ Bu proje, Serbest (Klinisyen) Veteriner Hekimler için suni tohumlama süreçler
 
 iOS’ta Safari ile açıp Paylaş düğmesi > Ana Ekrana Ekle yapmanız gerekir. 
 
-Android için ilk açılışta programın en alt sağ tarafında Ayarlara girip yükleyiniz.
+Android için ilk açılışta programın en alt sağ tarafında Ayarlara girip "Ana Sayfaya Ekle" ile yükleyiniz. 
+İlk Giriş için ŞİFRE talep ediniz.
 
 ## 🚀 Özellikler
 * Suni tohumlama verilerinin dijital kaydı ve takibi.
