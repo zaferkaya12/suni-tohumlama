@@ -5,91 +5,29 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Suni Tohumlama Stok Takip Sistemi</title>
     <style>
-        /* Lisans Ekranı Tasarımı */
         #lisans-ekrani {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: #1e293b;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 999999;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: #1e293b; display: flex; justify-content: center;
+            align-items: center; z-index: 9999999; font-family: sans-serif;
         }
         .lisans-kutusu {
-            background-color: #ffffff;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-            width: 90%;
-            max-width: 400px;
-            text-align: center;
-        }
-        .lisans-kutusu h2 {
-            color: #0f172a;
-            margin-bottom: 10px;
-            font-size: 22px;
-        }
-        .lisans-kutusu p {
-            color: #64748b;
-            font-size: 14px;
-            margin-bottom: 20px;
+            background-color: white; padding: 30px; border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3); width: 90%; max-width: 400px; text-align: center;
         }
         .cihaz-kodu-alani {
-            background-color: #f1f5f9;
-            padding: 10px;
-            border-radius: 6px;
-            font-family: monospace;
-            font-size: 16px;
-            color: #334155;
-            font-weight: bold;
-            letter-spacing: 1px;
-            margin-bottom: 20px;
-            border: 1px dashed #cbd5e1;
+            background-color: #f1f5f9; padding: 10px; border-radius: 6px;
+            font-family: monospace; font-size: 18px; color: #334155;
+            font-weight: bold; margin: 20px 0; border: 1px dashed #cbd5e1;
         }
         .lisans-input {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #e2e8f0;
-            border-radius: 6px;
-            font-size: 16px;
-            box-sizing: border-box;
-            margin-bottom: 20px;
-            text-align: center;
-            font-weight: bold;
-        }
-        .lisans-input:focus {
-            border-color: #3b82f6;
-            outline: none;
+            width: 100%; padding: 12px; border: 2px solid #e2e8f0;
+            border-radius: 6px; font-size: 16px; margin-bottom: 20px; text-align: center; font-weight: bold;
         }
         .lisans-buton {
-            width: 100%;
-            padding: 12px;
-            background-color: #2563eb;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: background 0.2s;
+            width: 100%; padding: 12px; background-color: #2563eb; color: white;
+            border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer;
         }
-        .lisans-buton:hover {
-            background-color: #1d4ed8;
-        }
-        #hata-mesaji {
-            color: #dc2626;
-            font-size: 13px;
-            margin-top: 10px;
-            display: none;
-        }
-        /* Ana Program Alanı */
-        #ana-program {
-            display: none;
-        }
+        #hata-mesaji { color: #dc2626; font-size: 14px; margin-top: 10px; display: none; }
     </style>
 </head>
 <body>
@@ -97,71 +35,56 @@
     <div id="lisans-ekrani">
         <div class="lisans-kutusu">
             <h2>Cihaz Yetkilendirme</h2>
-            <p>Lütfen aşağıdaki cihaz kodunu yöneticinize bildirerek lisans anahtarınızı alınız.</p>
-            
-            <div class="cihaz-kodu-alani" id="display-cihaz-kodu">Üretiliyor...</div>
-            
+            <p>Aşağıdaki kodu yöneticinize bildirerek lisans anahtarınızı alınız.</p>
+            <div class="cihaz-kodu-alani" id="display-cihaz-kodu">ST-Yükleniyor</div>
             <input type="text" id="lisans-anahtari" class="lisans-input" placeholder="Lisans Anahtarını Girin">
-            <button class="lisans-buton" onclick="lisansKontrolEt()">Uygulamayı Aktif Et</button>
+            <button class="lisans-buton" id="onay-butonu">Uygulamayı Aktif Et</button>
             <div id="hata-mesaji">Hatalı veya geçersiz lisans anahtarı!</div>
         </div>
     </div>
 
-    <div id="ana-program">
-        <div style="padding: 20px; font-family: sans-serif;">
-            <h2>Suni Tohumlama Stok Takip Sistemi</h2>
-            <p>Sistem başarıyla aktif edildi. Kendi orijinal stok takip tablolarınızı ve butonlarınızı buraya ekleyebilirsiniz.</p>
-        </div>
-
-    </div>
 
     <script>
-        // 1. Cihaza özel benzersiz kod üretici
-        function cihazKoduUret() {
-            let cihazId = localStorage.getItem('suni_tohumlama_cihaz_id');
-            if (!cihazId) {
-                cihazId = 'ST-' + Math.floor(100000 + Math.random() * 900000);
-                localStorage.setItem('suni_tohumlama_cihaz_id', cihazId);
+        (function() {
+            function cihazKoduUret() {
+                let cihazId = localStorage.getItem('suni_tohumlama_cihaz_id');
+                if (!cihazId) {
+                    cihazId = 'ST-' + Math.floor(100000 + Math.random() * 900000);
+                    localStorage.setItem('suni_tohumlama_cihaz_id', cihazId);
+                }
+                return cihazId;
             }
-            return cihazId;
-        }
 
-        // 2. Doğru anahtarı hesaplayan formül
-        function dogruAnahtarHesapla(cihazId) {
-            let sadeceSayilar = cihazId.replace(/[^0-9]/g, '');
-            let formul = (parseInt(sadeceSayilar) * 2) + 2026; 
-            return 'STK-' + formul;
-        }
-
-        // İlk hazırlıklar
-        const mevcutCihazKodu = cihazKoduUret();
-        document.getElementById('display-cihaz-kodu').innerText = mevcutCihazKodu;
-
-        // Cihaz daha önce zaten onaylanmışsa kilidi otomatik kaldır
-        if (localStorage.getItem('suni_tohumlama_aktif_mi') === 'evet') {
-            uygulamayiAc();
-        }
-
-        // Şifreyi denetleyen ana fonksiyon
-        function lisansKontrolEt() {
-            const girilenSifre = document.getElementById('lisans-anahtari').value.trim();
-            const beklenenSifre = dogruAnahtarHesapla(mevcutCihazKodu);
-
-            if (girilenSifre === beklenenSifre) {
-                localStorage.setItem('suni_tohumlama_aktif_mi', 'evet');
-                uygulamayiAc();
-            } else {
-                const hataAlani = document.getElementById('hata-mesaji');
-                hataAlani.style.display = 'block';
-                setTimeout(() => { hataAlani.style.display = 'none'; }, 3000);
+            function dogruAnahtarHesapla(cihazId) {
+                let sadeceSayilar = cihazId.replace(/[^0-9]/g, '');
+                let formul = (parseInt(sadeceSayilar) * 2) + 2026; 
+                return 'STK-' + formul;
             }
-        }
 
-        // Kilidi açan fonksiyon
-        function uygulamayiAc() {
-            document.getElementById('lisans-ekrani').style.display = 'none';
-            document.getElementById('ana-program').style.display = 'block';
-        }
+            const mevcutCihazKodu = cihazKoduUret();
+            document.getElementById('display-cihaz-kodu').innerText = mevcutCihazKodu;
+
+            if (localStorage.getItem('suni_tohumlama_aktif_mi') === 'evet') {
+                document.getElementById('lisans-ekrani').style.removeProperty('display');
+                document.getElementById('lisans-ekrani').style.setAttribute('style', 'display:none !important');
+                document.getElementById('lisans-ekrani').innerHTML = '';
+            }
+
+            document.getElementById('onay-butonu').addEventListener('click', function() {
+                const girilenSifre = document.getElementById('lisans-anahtari').value.trim();
+                const beklenenSifre = dogruAnahtarHesapla(mevcutCihazKodu);
+
+                if (girilenSifre === beklenenSifre) {
+                    localStorage.setItem('suni_tohumlama_aktif_mi', 'evet');
+                    document.getElementById('lisans-ekrani').setAttribute('style', 'display:none !important');
+                    document.getElementById('lisans-ekrani').innerHTML = '';
+                } else {
+                    const hataAlani = document.getElementById('hata-mesaji');
+                    hataAlani.style.display = 'block';
+                    setTimeout(() => { hataAlani.style.display = 'none'; }, 3000);
+                }
+            });
+        })();
     </script>
 </body>
 </html>
