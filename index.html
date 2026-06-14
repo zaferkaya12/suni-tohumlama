@@ -38,7 +38,7 @@
             font-size: 14px;
             margin-bottom: 20px;
         }
-        .cihaz-kodu-alanı {
+        .cihaz-kodu-alani {
             background-color: #f1f5f9;
             padding: 10px;
             border-radius: 6px;
@@ -86,7 +86,7 @@
             margin-top: 10px;
             display: none;
         }
-        /* Ana Program İlk Başta Gizli */
+        /* Ana Program Alanı */
         #ana-program {
             display: none;
         }
@@ -99,48 +99,50 @@
             <h2>Cihaz Yetkilendirme</h2>
             <p>Lütfen aşağıdaki cihaz kodunu yöneticinize bildirerek lisans anahtarınızı alınız.</p>
             
-            <div class="cihaz-kodu-alanı" id="display-cihaz-kodu">Üretiliyor...</div>
+            <div class="cihaz-kodu-alani" id="display-cihaz-kodu">Üretiliyor...</div>
             
             <input type="text" id="lisans-anahtari" class="lisans-input" placeholder="Lisans Anahtarını Girin">
-            <button class="lisans-buton" onclick="lisansKontrol Et()">Uygulamayı Aktif Et</button>
+            <button class="lisans-buton" onclick="lisansKontrolEt()">Uygulamayı Aktif Et</button>
             <div id="hata-mesaji">Hatalı veya geçersiz lisans anahtarı!</div>
         </div>
     </div>
 
     <div id="ana-program">
-        <iframe src="about:blank" id="orijinal-icerik" style="position:fixed; top:0; left:0; width:100%; height:100%; border:none; z-index:9999;"></iframe>
+        <div style="padding: 20px; font-family: sans-serif;">
+            <h2>Suni Tohumlama Stok Takip Sistemi</h2>
+            <p>Sistem başarıyla aktif edildi. Kendi orijinal stok takip tablolarınızı ve butonlarınızı buraya ekleyebilirsiniz.</p>
+        </div>
+
     </div>
 
     <script>
-        // 1. Cihaza özel benzersiz bir kod üretme fonksiyonu
+        // 1. Cihaza özel benzersiz kod üretici
         function cihazKoduUret() {
             let cihazId = localStorage.getItem('suni_tohumlama_cihaz_id');
             if (!cihazId) {
-                // Rastgele 6 haneli bir bilgisayar numarası üretir
                 cihazId = 'ST-' + Math.floor(100000 + Math.random() * 900000);
                 localStorage.setItem('suni_tohumlama_cihaz_id', cihazId);
             }
             return cihazId;
         }
 
-        // 2. Basit ve güvenli şifre doğrulama motoru (Algoritma)
-        // Yöneticinin vereceği şifre: Cihaz Kodunun sayısal kısmının 2 katı + 2026 olacaktır.
+        // 2. Doğru anahtarı hesaplayan formül
         function dogruAnahtarHesapla(cihazId) {
             let sadeceSayilar = cihazId.replace(/[^0-9]/g, '');
             let formul = (parseInt(sadeceSayilar) * 2) + 2026; 
             return 'STK-' + formul;
         }
 
-        // Sayfa açıldığında çalışacak ilk hazırlık
+        // İlk hazırlıklar
         const mevcutCihazKodu = cihazKoduUret();
         document.getElementById('display-cihaz-kodu').innerText = mevcutCihazKodu;
 
-        // Daha önce doğru şifre girilmiş mi kontrolü
+        // Cihaz daha önce zaten onaylanmışsa kilidi otomatik kaldır
         if (localStorage.getItem('suni_tohumlama_aktif_mi') === 'evet') {
             uygulamayiAc();
         }
 
-        // Butona basıldığında şifreyi kontrol eden fonksiyon
+        // Şifreyi denetleyen ana fonksiyon
         function lisansKontrolEt() {
             const girilenSifre = document.getElementById('lisans-anahtari').value.trim();
             const beklenenSifre = dogruAnahtarHesapla(mevcutCihazKodu);
@@ -149,24 +151,16 @@
                 localStorage.setItem('suni_tohumlama_aktif_mi', 'evet');
                 uygulamayiAc();
             } else {
-                const hataAlanlı = document.getElementById('hata-mesaji');
-                hataAlanlı.style.display = 'block';
-                setTimeout(() => { hataAlanlı.style.display = 'none'; }, 3000);
+                const hataAlani = document.getElementById('hata-mesaji');
+                hataAlani.style.display = 'block';
+                setTimeout(() => { hataAlani.style.display = 'none'; }, 3000);
             }
         }
 
-        // Şifre doğruysa kilit ekranını kaldıran fonksiyon
+        // Kilidi açan fonksiyon
         function uygulamayiAc() {
             document.getElementById('lisans-ekrani').style.display = 'none';
             document.getElementById('ana-program').style.display = 'block';
-            
-            // Orijinal kodlarınızı korumak için buraya mevcut sayfanın kendi kodlarını basıyoruz
-            document.getElementById('orijinal-icerik').srcdoc = `
-                <div style="padding:20px; font-family:sans-serif;">
-                    <h3>Suni Tohumlama Takip Sistemi Aktif</h3>
-                    <p>Program başarıyla doğrulandı ve kullanıma hazır.</p>
-                </div>
-            `;
         }
     </script>
 </body>
