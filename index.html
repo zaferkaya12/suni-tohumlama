@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Suni Tohumlama Stok Takip Sistemi</title>
     <style>
+        /* KİLİT EKRANI TASARIMI */
         #lisans-ekrani {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background-color: #1e293b; display: flex; justify-content: center;
@@ -29,8 +30,8 @@
         }
         #hata-mesaji { color: #dc2626; font-size: 14px; margin-top: 10px; display: none; }
         
-        /* Ana programı tam ekran yapma ayarı */
-        #ana-program-cerceve {
+        /* Ana program penceresi ilk başta gizli */
+        #ana-program-penceresi {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             border: none; display: none; z-index: 8888888;
         }
@@ -49,17 +50,10 @@
         </div>
     </div>
 
-    <iframe id="ana-program-cerceve"></iframe>
+    <iframe id="ana-program-penceresi" src="stok_takip.html"></iframe>
 
     <script>
         (function() {
-            // SİZİN ÇALIŞAN ORİJİNAL STOK TAKİP KODLARINIZIN TAMAMI
-            // (Lütfen bilgisayarınızdaki o sorunsuz, tablolu asıl kodların hepsini buradaki iki tırnak arasına yapıştırın)
-            const orijinalKodlar = `
-                
-                
-                `;
-
             function cihazKoduUret() {
                 let cihazId = localStorage.getItem('suni_tohumlama_cihaz_id');
                 if (!cihazId) {
@@ -98,13 +92,7 @@
 
             function uygulamayiAc() {
                 document.getElementById('lisans-ekrani').style.display = 'none';
-                const cerceve = document.getElementById('ana-program-cerceve');
-                cerceve.style.display = 'block';
-                
-                // Kodları çakışmasız ve tertemiz bir şekilde ekrana basan sihirli satır:
-                cerceve.contentWindow.document.open();
-                cerceve.contentWindow.document.write(orijinalKodlar);
-                cerceve.contentWindow.document.close();
+                document.getElementById('ana-program-penceresi').style.display = 'block';
             }
         })();
     </script>
